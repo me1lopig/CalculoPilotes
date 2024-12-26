@@ -24,7 +24,11 @@ import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 # importacion de datos del terreno del archivo datos_terreno.xlsx
 espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos=ft.datos_terreno()
 
-valor_z=np.arange(0,20+0.10,0.10)
+
+# graficas de las tensiones totales, efectivas y de poro
+incremento=0.2
+profundidad_maxima=max(cotas)
+valor_z=np.arange(0,profundidad_maxima+incremento,incremento)
 presionEfectiva=[]
 presionTotal=[]
 presionPoro=[]
@@ -39,7 +43,7 @@ for z in valor_z:
     presionEfectiva.append(presion_efectiva)
     presionTotal.append(presion)
     presionPoro.append(u_z)
-    #print(z,presion,presion_efectiva,u_z)
+    print(z,presion,presion_efectiva,u_z)
 
 presionE = (presionEfectiva, valor_z, 'darkred', 'Presion Efectiva')
 presionT = (presionTotal, valor_z, 'blue', 'Presion Total')
