@@ -208,174 +208,6 @@ def presion_total(cotas,valor_nf,pe_saturado,pe_seco,valor_cota):
 
 
 
-def resistencia_MC(cotas,valor_presion,cohesion,fi,z):
-    # calculo de la resisencia al corte en un punto del terreno
-    # el valor de la presion puede ser en totales o en efectivas
-
-    # cálculo de la cohesión y el ángulo de rozamiento
-    cohesion_ter=cohesion[parametro_terreno(cotas,z)]
-    fi_ter=fi[parametro_terreno(cotas,z)]
-    
-    # valor de la resistencia al corte 
-    res_corte=cohesion_ter+valor_presion*np.tan(np.deg2rad(fi_ter))
-
-    return res_corte
-
-
-
-def guardar_docx_datos(a,b,h,q,ax,incrx,az,incrz,directorio,nivel_freatico,asiento_max):
-    # creación de un informe con los datos de entrada y los resultados en formato  .docx
-    # 
-    
-    document = Document()
-    # Añadimos un titulo al documento, a nivel 0
-    document.add_heading('Datos del modelo geométrico', 0)
-    # Añadimos un párrafo
-    p = document.add_paragraph('En este documento se incluyen los datos de la carga y características del terreno, ')
-    p.add_run('Así como los resultados de las tensiones y asientos ')
-    
-    # Datos iniciales
-    # Características del terraplén
-    document.add_heading('Datos del terraplen ', level=1)
-    document.add_paragraph("Valor del ancho del derrame {0:0.2f} m".format(a), style='List Bullet')
-    document.add_paragraph("Valor del ancho de la semibase {0:0.2f} m".format(b), style='List Bullet')
-    document.add_paragraph("Valor de la altura del terraplén {0:0.2f} m".format(h), style='List Bullet')
-    document.add_paragraph("Peso específico del relleno de terraplén {0:0.2f} kN/m3".format(q/h), style='List Bullet')
-    document.add_paragraph("Valor de la carga de tierras  {0:0.2f} kN/m2".format(q), style='List Bullet')
-    document.add_paragraph("Profundidad del nivel freático  {0:0.2f} m".format(nivel_freatico), style='List Bullet')
-
-    # Características del mallado de cálculo
-    document.add_heading('Datos del mallado ', level=1)
-    document.add_paragraph("Ancho de banda {0:0.2f} m".format(ax), style='List Bullet')
-    document.add_paragraph("incremento en x= {0:0.2f} m".format(incrx), style='List Bullet')
-    document.add_paragraph("Profundidad de cálculo {0:0.2f} m".format(az), style='List Bullet')
-    document.add_paragraph("incremento en z= {0:0.2f} m".format(incrz), style='List Bullet')
-
-
-    # Tabla de datos del terreno
-    # a variar según se incrementa el numero de parámetros a tener en cuenta en los cálculos 
-
-    # Añadimos un titulo al documento, a nivel 0
-    document.add_heading('Datos del modelo geotécnico ', 0)
-    
-    # Ruta del archivo Excel
-    excel_file = 'datos_terreno.xlsx'
-
-    # Abre el archivo Excel
-    workbook = openpyxl.load_workbook(excel_file)
-
-    # Selecciona la hoja de Excel
-    sheet = workbook['Hoja1']
-
-    # Crea un nuevo documento de Word
-    #doc = Document()
-
-    # Crea una tabla en el documento de Word
-    table = document.add_table(rows=0, cols=sheet.max_column)
-    table.autofit = False
-    # Establecer el tamaño de fuente para todas las celdas de la tabla
-    style = document.styles['Normal']
-    font = style.font
-    font.size = Pt(9)
-
-
-    # Obtén los datos de Excel y añádelos a la tabla de Word
-    for row in sheet.iter_rows():
-        table_row = table.add_row().cells
-        for i, cell in enumerate(row):
-            table_row[i].text = str(cell.value)
-
-
-    # Ajusta el ancho de las celdas para que se adecuen al contenido
-    for column in table.columns:
-        for cell in column.cells:
-            cell.width=Cm(1.5)
-
-
-# introducimos dos retorno de carro después de la tabla
-
-    paragraph = document.add_paragraph("\n\n")
-
-# Añadimos un titulo al documento, a nivel 0
-    document.add_heading('Resultados de los cálculos', 0)
-
-
-    document.add_heading('Cálculos realizados ', level=1)
-    document.add_paragraph('Asientos bajo el terraplén [cm]', style='List Number')
-    document.add_paragraph('Tensiones efectivas en el terreno [kN/m2]', style='List Number')
-    document.add_paragraph('Tensiones totales en el terreno [kN/m2]', style='List Number')
-    document.add_paragraph('Incremento de tensiones en x [kN/m2]', style='List Number')
-    document.add_paragraph('Incremento de tensiones en z [kN/m2]', style='List Number')
-    document.add_paragraph('Incremento de tensiones en xz [kN/m2]', style='List Number')
-    
-
-    document.add_heading('Imágenes de los resultados ', level=1)
-
-    # imágenes de resultados de los cálculos
-    # se localizan las imágenes del directorio que sean *.png y se meten en unna lista
-    listado=os.listdir(directorio)
-    imagenes = []
-    for fichero in listado:
-        if os.path.isfile(os.path.join(directorio, fichero)) and fichero.endswith('.png'):
-            imagenes.append(fichero)
-    imagenes=sorted(imagenes) # ordenacion de la lista de imágenes
-
-    # carga de la imagen de asientos
-    document.add_heading('Asientos', 3) 
-    document.add_picture(directorio+'/'+imagenes[-1],width=Cm(12))
-    
-    # representación del asiento máximo
-    numero_formateado = "{:.4f}".format(asiento_max)
-    paragraph = document.add_paragraph("Asiento máximo "+numero_formateado+" m")
-
-    
-    # carga del resto de imágenes
-    for index in np.arange(0,len(imagenes)-1):
-        document.add_heading(imagenes[index][0:len(imagenes[index])-4], 3) 
-        document.add_picture(directorio+'/'+imagenes[index],width=Cm(12))
-
-    # Guardado del archivo con la información
-    document.save(directorio+'/'+'Informe.docx')
-
-
-
-
-def guardar_xlsx_tensiones(xcoord,zcoord,array_datos,directorio,nombre_archivo):
-
-    # guardado en excel de los resultados de los calculos de una matriz de datos
-    wb = openpyxl.Workbook()
-    hoja = wb.active
-    for fila in np.arange(zcoord.size):
-        hoja.cell(row=fila+2, column=1, value=zcoord[fila])
-        for columna in np.arange(xcoord.size):
-            hoja.cell(row=fila+2, column=columna+2, value=array_datos[fila,columna])
-
-     # valores de x
-    for columna in np.arange(xcoord.size):
-        hoja.cell(row=1, column=columna+2, value=xcoord[columna])
-
-    wb.save(directorio+'/'+nombre_archivo+'.xlsx')
-    
-
-
-
-def guardar_xlsx_asientos(xcoord,array_datos,directorio,nombre_archivo):
-    
-    # guardado en excel de los resultados de los calculos de una matriz de datos
-    wb = openpyxl.Workbook()
-    hoja = wb.active
-    # valores del vector
-    for columna in np.arange(xcoord.size):
-        hoja.cell(row=2, column=columna+1, value=array_datos[columna])
-     # valores de x
-    for columna in np.arange(xcoord.size):
-        hoja.cell(row=1, column=columna+1, value=xcoord[columna])
-
-    # se crea un directorio para calculo realizado
-
-    wb.save(directorio+'/'+nombre_archivo+'.xlsx')
-
-
 
 def grafico_grupo(lista_datos, titulo,etiqueta_x):
     fig, ax = plt.subplots()
@@ -402,11 +234,10 @@ def promedioPunta(D,L,cotas,parametro):
     # cotas tabla de cotas del terreno
     # parametro, parametro al que calcular el promedio
 
-    
     incr=0.05 # incremento de paso
-    p_suma=0
     
-    # valores por debajo de la punta del pilote
+    # valores por debajo de la punta del pilote 3D
+    p_suma=0
     for z in np.arange(L,L+3*D+incr,incr):
         p=parametro[parametro_terreno(cotas,z)]
         p_suma=p+p_suma
@@ -414,9 +245,100 @@ def promedioPunta(D,L,cotas,parametro):
     promedio3D=(p_suma)/(3*D/incr+1)
 
 
-    # valores por encima de la punta
+    # valores por encima de la punta 6D
+    p_suma=0
+    # valores por debajo de la punta del pilote
+    for z in np.arange(L,L-6*D-incr,-incr):
+        p=parametro[parametro_terreno(cotas,z)]
+        p_suma=p+p_suma
+    
+    promedio6D=(p_suma)/(6*D/incr+1)
 
-    return promedio3D
+    # cálculo del promedio
+    promedio=(3*promedio3D+6*promedio6D)/9
+
+    return promedio
 
 
-B
+def qp_CTEgr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L):
+    # calculo de la tensión unitaria por punta según el CTE suelos granulares
+    # fi, ángulo de rozamiento
+    # D, diámetro del pilote
+    # L longitud del pilote
+
+    # factores fp procedimiento constructivo
+    fph=2.5 # para el caso de pilotes hincados
+    fpi=3 # para el caso de pilotes in situ
+
+    # cálculo de la presion efectiva en la zona de punta
+
+    presionTotal=presion_total(cotas,valor_nf,pe_saturado,pe_seco,L) # total
+    u_z=n_freatico(valor_nf,L)*9.81 # presion de poro
+    presionEfectiva=presionTotal-u_z # presion efectiva
+
+    print('Presion Total=',presionTotal)
+    print('Presion Efctiva=',presionEfectiva)
+    print('Presion de Poro=',u_z)
+
+
+    # valor promediado de fi
+
+    fi_promedio=promedioPunta(D,L,cotas,fi)
+
+    print('fi promedio=',fi_promedio)
+    fi_promedio=np.deg2rad(fi_promedio) # paso a radianes
+
+    # factor de capacidad de carga
+    Nq=(1+np.sin(fi_promedio))/(1-np.sin(fi_promedio))*np.exp(np.pi*np.tan(fi_promedio))
+
+    print('Nq=',Nq)
+
+
+    qpi=fpi*presionEfectiva*Nq/1000 # pilotes insitu en MPa
+    qph=fph*presionEfectiva*Nq/1000 # pilotes hincados en MPa
+
+    # limitacion de los 20 MPa
+    if (qpi>20):
+        qpi=20
+    if (qph>20):
+        qph=20
+
+    print('qpi=',qpi)
+    print('qph=',qph)
+
+
+    # calculo de la carga de hundimiento y admisible
+
+    area=0.25*np.pi*D**2
+    Qpi=qpi/area
+    Qph=qph/area
+    print('Area=',area)
+
+    print('Carga de hundimiento por punta')
+    print('Qpi=',Qpi)
+    print('Qph=',Qph)
+
+    print('Carga admisible por punta')
+    print('Qpi=',Qpi/3)
+    print('Qph=',Qph/3)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
