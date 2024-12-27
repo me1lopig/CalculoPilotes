@@ -20,12 +20,7 @@
     # presion_total, calcula la presión total en un punto del terreno
 
     # promedioPunta, cálculo del promedio de un parametro en la zona de punta 3D abajo y 6D hacia arriba
-
-    # guardar_docx_datos, se guarda un resumen de los datos y resultados en formato word
-    # guardar_xlxs_tensiones, guarda en formato excel los resultados de los cálculos de las tensiones creados
-        # por la carga del terraplén, en x, z, xz
-    # guardar_xlxs_asientos, guarda en excel los resultados de los cálculos de los asientos
-    
+    # grafica_tensiones, calcula las tensiones en el intervalo de datos del archivo datos_terreno y da la grafica y la tabla
 
     # grafico_grupo, plotea varias magnitudes  o de forma individual
 
@@ -55,7 +50,7 @@ def crea_directorio():
 
 def datos_terreno():
 
-    libro = openpyxl.load_workbook('datos_terreno.xlsx')
+    libro = openpyxl.load_workbook('datos_terreno_2.xlsx')
     hoja = libro.active
 
     # importacion de variables del terreno
@@ -207,6 +202,32 @@ def presion_total(cotas,valor_nf,pe_saturado,pe_seco,valor_cota):
     return presion_total
 
 
+def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico):
+    valor_z=np.arange(0,max(cotas)+0.10,0.10)
+    presionEfectiva=[]
+    presionTotal=[]
+    presionPoro=[]
+
+    for z in valor_z:
+        pe_sat=pe_saturado[parametro_terreno(cotas,z)]
+        pe_ap=pe_seco[parametro_terreno(cotas,z)]
+        presion=presion_total(cotas,nivel_freatico,pe_saturado,pe_seco,z)
+        u_z=n_freatico(nivel_freatico,z)*9.81
+        presion_efectiva=presion-u_z
+   
+        presionEfectiva.append(presion_efectiva)
+        presionTotal.append(presion)
+        presionPoro.append(u_z)
+        #print(z,presion,presion_efectiva,u_z)
+
+    presionE = (presionEfectiva, valor_z, 'darkred', 'Presion Efectiva')
+    presionT = (presionTotal, valor_z, 'blue', 'Presion Total')
+    presionP = (presionPoro, valor_z, 'green', 'Presion de Poro')
+
+    # todas las tensiones
+    lista_datos = [presionE, presionT, presionP]
+    grafico_grupo(lista_datos, "Tensiones en el terreno",'kN/m2')
+
 
 
 def grafico_grupo(lista_datos, titulo,etiqueta_x):
@@ -238,21 +259,25 @@ def promedioPunta(D,L,cotas,parametro):
     
     # valores por debajo de la punta del pilote 3D
     p_suma=0
+    contador=0
     for z in np.arange(L,L+3*D+incr,incr):
         p=parametro[parametro_terreno(cotas,z)]
         p_suma=p+p_suma
+        contador=contador+1
 
-    promedio3D=(p_suma)/(3*D/incr+1)
+    promedio3D=(p_suma)/(contador)
 
 
     # valores por encima de la punta 6D
     p_suma=0
+    contador=0
     # valores por debajo de la punta del pilote
     for z in np.arange(L,L-6*D-incr,-incr):
         p=parametro[parametro_terreno(cotas,z)]
         p_suma=p+p_suma
+        contador=contador+1
     
-    promedio6D=(p_suma)/(6*D/incr+1)
+    promedio6D=(p_suma)/(contador)
 
     # cálculo del promedio
     promedio=(3*promedio3D+6*promedio6D)/9
@@ -293,9 +318,9 @@ def qp_CTEgr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L):
 
     print('Nq=',Nq)
 
-
-    qpi=fpi*presionEfectiva*Nq/1000 # pilotes insitu en MPa
-    qph=fph*presionEfectiva*Nq/1000 # pilotes hincados en MPa
+    # Cálculo de las tensiones unitarias 
+    qpi=fpi*presionEfectiva*Nq # pilotes insitu en KPa
+    qph=fph*presionEfectiva*Nq # pilotes hincados en KPa
 
     # limitacion de los 20 MPa
     if (qpi>20):
@@ -303,15 +328,15 @@ def qp_CTEgr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L):
     if (qph>20):
         qph=20
 
-    print('qpi=',qpi)
-    print('qph=',qph)
+    print('qpi=',qpi/1000,'MPa')
+    print('qph=',qph/1000,'MPa')
 
 
     # calculo de la carga de hundimiento y admisible
 
     area=0.25*np.pi*D**2
-    Qpi=qpi/area
-    Qph=qph/area
+    Qpi=qpi*area
+    Qph=qph*area
     print('Area=',area)
 
     print('Carga de hundimiento por punta')
@@ -321,6 +346,8 @@ def qp_CTEgr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L):
     print('Carga admisible por punta')
     print('Qpi=',Qpi/3)
     print('Qph=',Qph/3)
+
+
 
 
 
