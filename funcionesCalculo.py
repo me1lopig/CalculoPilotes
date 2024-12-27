@@ -19,9 +19,8 @@
 
     # presion_total, calcula la presión total en un punto del terreno
 
-    # cálculo de la resistencia por fuste
-    # cálculo de la resistencia por punta
- 
+    # promedioPunta, cálculo del promedio de un parametro en la zona de punta 3D abajo y 6D hacia arriba
+
     # guardar_docx_datos, se guarda un resumen de los datos y resultados en formato word
     # guardar_xlxs_tensiones, guarda en formato excel los resultados de los cálculos de las tensiones creados
         # por la carga del terraplén, en x, z, xz
@@ -378,7 +377,7 @@ def guardar_xlsx_asientos(xcoord,array_datos,directorio,nombre_archivo):
 
 
 
-def grafico_grupo(lista_datos, titulo,etiquetax):
+def grafico_grupo(lista_datos, titulo,etiqueta_x):
     fig, ax = plt.subplots()
 
     for datos in lista_datos:
@@ -387,7 +386,7 @@ def grafico_grupo(lista_datos, titulo,etiquetax):
 
     ax.invert_yaxis()
     ax.set_aspect('auto', adjustable='box')
-    ax.set_xlabel(etiquetax)
+    ax.set_xlabel(etiqueta_x)
     ax.set_ylabel("Profundidad [m]")
     ax.set_title(titulo)
     ax.legend()
@@ -395,3 +394,29 @@ def grafico_grupo(lista_datos, titulo,etiquetax):
     #plt.savefig(directorio+'/'+titulo+".png") # guardado de la imagen
     plt.show()
 
+
+def promedioPunta(D,L,cotas,parametro):
+    # cálculo del promedio en punta de los parámtros resistentes
+    #D= diámetro pilote
+    #L=9.32  longitud pilote
+    # cotas tabla de cotas del terreno
+    # parametro, parametro al que calcular el promedio
+
+    
+    incr=0.05 # incremento de paso
+    p_suma=0
+    
+    # valores por debajo de la punta del pilote
+    for z in np.arange(L,L+3*D+incr,incr):
+        p=parametro[parametro_terreno(cotas,z)]
+        p_suma=p+p_suma
+
+    promedio3D=(p_suma)/(3*D/incr+1)
+
+
+    # valores por encima de la punta
+
+    return promedio3D
+
+
+B

@@ -53,3 +53,9 @@ presionP = (presionPoro, valor_z, 'green', 'Presion de Poro')
 lista_datos = [presionE, presionT, presionP]
 ft.grafico_grupo(lista_datos, "Tensiones en el terreno",'kN/m2')
 
+# todas las tensiones
+lista_datos = [presionE]
+ft.grafico_grupo(lista_datos, "Tensiones en el terreno",'kN/m2')
+
+
+
