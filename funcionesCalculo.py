@@ -18,6 +18,7 @@
     # insertar_valor, inserta un valor de forma ordenada dentro de una lista
 
     # presion_total, calcula la presión total en un punto del terreno
+    # presion media, calcula la presión media de un tramo de fuste de pilote
 
     # promedioPunta, cálculo del promedio de un parametro en la zona de punta 3D abajo y 6D hacia arriba
     # grafica_tensiones, calcula las tensiones en el intervalo de datos del archivo datos_terreno y da la grafica y la tabla
@@ -50,7 +51,7 @@ def crea_directorio():
 
 def datos_terreno():
 
-    libro = openpyxl.load_workbook('datos_terreno_2.xlsx')
+    libro = openpyxl.load_workbook('datos_terreno.xlsx')
     hoja = libro.active
 
     # importacion de variables del terreno
@@ -201,6 +202,10 @@ def presion_total(cotas,valor_nf,pe_saturado,pe_seco,valor_cota):
     
     return presion_total
 
+def presionMedia():
+    # Calula la presion media por tramos
+
+    return 'hello'
 
 def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico):
     valor_z=np.arange(0,max(cotas)+0.10,0.10)
