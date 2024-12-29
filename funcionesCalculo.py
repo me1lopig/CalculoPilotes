@@ -51,7 +51,7 @@ def crea_directorio():
 
 def datos_terreno():
 
-    libro = openpyxl.load_workbook('datos_terreno.xlsx')
+    libro = openpyxl.load_workbook('datos_terreno_2.xlsx')
     hoja = libro.active
 
     # importacion de variables del terreno
@@ -78,7 +78,7 @@ def datos_terreno():
         espesor.append(row[0].value)
         espesor[0]=0
         az=sum(espesor) # vector de espesores
-        nivel_freatico=hoja.cell(row=2, column=2).value
+ 
         pe_seco.append(row[2].value)
         pe_seco[0]=0
         pe_saturado.append(row[3].value)
@@ -94,7 +94,7 @@ def datos_terreno():
 
         #tipo_calculo.append(row[10].value)
         #tipo_calculo[0]=0
-
+    nivel_freatico=hoja.cell(row=2, column=2).value
 
     for i in np.arange(len(espesor)):
         cotas.append(sum(espesor[0:i+1]))
@@ -105,6 +105,32 @@ def datos_terreno():
 
     return espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos
 
+
+def datos_pilotes():
+    # importacion de los datos de defición de los pilotes
+
+    libro = openpyxl.load_workbook('datos_pilotes.xlsx')
+    hoja = libro.active
+
+        # importacion de variables del terreno
+    
+    # geometría de las capas
+    diametros=[]
+
+    for row in hoja.iter_rows():
+        diametros.append(row[0].value)
+ 
+    diametros.pop(0) # Se elimina el primer elemento
+    diametros=np.divide(diametros,1000) # pasamos a metros
+
+    Lmin=hoja.cell(row=2, column=2).value
+    Lincr=hoja.cell(row=2, column=3).value
+    fp=hoja.cell(row=2, column=4).value
+    kr=hoja.cell(row=2, column=5).value
+    f=hoja.cell(row=2, column=6).value
+
+
+    return diametros,Lmin,Lincr,fp,kr,f
 
 
 
@@ -207,7 +233,7 @@ def presionMedia():
 
     return 'hello'
 
-def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico):
+def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio):
     valor_z=np.arange(0,max(cotas)+0.10,0.10)
     presionEfectiva=[]
     presionTotal=[]
@@ -231,11 +257,11 @@ def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico):
 
     # todas las tensiones
     lista_datos = [presionE, presionT, presionP]
-    grafico_grupo(lista_datos, "Tensiones en el terreno",'kN/m2')
+    grafico_grupo(lista_datos, "Tensiones en el terreno",'kN/m2',directorio)
 
 
 
-def grafico_grupo(lista_datos, titulo,etiqueta_x):
+def grafico_grupo(lista_datos, titulo,etiqueta_x,directorio):
     fig, ax = plt.subplots()
 
     for datos in lista_datos:
@@ -249,8 +275,8 @@ def grafico_grupo(lista_datos, titulo,etiqueta_x):
     ax.set_title(titulo)
     ax.legend()
     #ax.set_aspect('equal', adjustable='box')
-    #plt.savefig(directorio+'/'+titulo+".png") # guardado de la imagen
-    plt.show()
+    plt.savefig(directorio+'/'+titulo+".png") # guardado de la imagen
+    #plt.show()
 
 
 def promedioPunta(D,L,cotas,parametro):
@@ -290,15 +316,12 @@ def promedioPunta(D,L,cotas,parametro):
     return promedio
 
 
-def qp_CTEgr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L):
+def qp_CTE_gr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L,fp):
     # calculo de la tensión unitaria por punta según el CTE suelos granulares
     # fi, ángulo de rozamiento
     # D, diámetro del pilote
     # L longitud del pilote
-
-    # factores fp procedimiento constructivo
-    fph=2.5 # para el caso de pilotes hincados
-    fpi=3 # para el caso de pilotes in situ
+    # fp factor que depende del proceso constructivo fp=2 hincados y fp=3 insitu
 
     # cálculo de la presion efectiva en la zona de punta
 
@@ -306,51 +329,111 @@ def qp_CTEgr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L):
     u_z=n_freatico(valor_nf,L)*9.81 # presion de poro
     presionEfectiva=presionTotal-u_z # presion efectiva
 
-    print('Presion Total=',presionTotal)
-    print('Presion Efctiva=',presionEfectiva)
-    print('Presion de Poro=',u_z)
-
-
+  
     # valor promediado de fi
-
     fi_promedio=promedioPunta(D,L,cotas,fi)
-
-    print('fi promedio=',fi_promedio)
     fi_promedio=np.deg2rad(fi_promedio) # paso a radianes
 
     # factor de capacidad de carga
     Nq=(1+np.sin(fi_promedio))/(1-np.sin(fi_promedio))*np.exp(np.pi*np.tan(fi_promedio))
 
-    print('Nq=',Nq)
-
     # Cálculo de las tensiones unitarias 
-    qpi=fpi*presionEfectiva*Nq # pilotes insitu en KPa
-    qph=fph*presionEfectiva*Nq # pilotes hincados en KPa
+    qp=fp*presionEfectiva*Nq # pilotes en KPa
 
     # limitacion de los 20 MPa
-    if (qpi>20):
-        qpi=20
-    if (qph>20):
-        qph=20
-
-    print('qpi=',qpi/1000,'MPa')
-    print('qph=',qph/1000,'MPa')
-
+    if (qp/1000>20):
+        qp=20000
 
     # calculo de la carga de hundimiento y admisible
-
     area=0.25*np.pi*D**2
-    Qpi=qpi*area
-    Qph=qph*area
-    print('Area=',area)
+    Qhp=qp*area
 
-    print('Carga de hundimiento por punta')
-    print('Qpi=',Qpi)
-    print('Qph=',Qph)
+    return qp,Qhp
 
-    print('Carga admisible por punta')
-    print('Qpi=',Qpi/3)
-    print('Qph=',Qph/3)
+
+def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
+
+    # calculo de la tensión unitaria por punta según el CTE suelos granulares
+    # fi, ángulo de rozamiento
+    # D, diámetro del pilote
+    # L longitud del pilote
+    # f factor que depende del proceso constructivo y tipo de material 
+        # f=1 insitu hormigón y madera
+        # f=0.9 prefabricados hormigón y madera
+        # f=0.8 de acero
+    # kr factor que depende del proceso constructivo 
+        # kr=1 hncados  
+        # kr=0.75 perforados
+
+
+
+    # Cálculo de las tensiones efectivas medias en el nivel considerado
+
+    def presionEfectivaMedia(zfinf,zfsup):
+    # funcion auxiliar para el cálculo de la tension efectiva media 
+    
+        presion=presion_total(cotas,nivel_freatico,pe_saturado,pe_seco,zfinf)
+        u_z=n_freatico(nivel_freatico,zfinf)*9.81
+        presion_efectiva_inf=presion-u_z
+
+    
+        presion=presion_total(cotas,nivel_freatico,pe_saturado,pe_seco,zfsup)
+        u_z=n_freatico(nivel_freatico,zfsup)*9.81
+        presion_efectiva_sup=presion-u_z
+
+        presion_media=(presion_efectiva_inf+presion_efectiva_sup)*0.5
+
+        return presion_media
+
+
+    if nivel_freatico not in cotas: 
+        listafuste = insertar_valor(cotas, nivel_freatico)
+    else:
+        listafuste=cotas
+
+
+    # listados de resultados
+    listaTensionesFuste=[]
+    listaLongitudesFuste=[]
+    listaTensionesUnitarias=[]
+    ListaTensionesHundimiento=[]
+
+    for z in np.arange(0,len(listafuste)-1):
+
+        zfinf=listafuste[z]
+        zfsup=listafuste[z+1]
+
+
+        if (zfinf<L) and (zfsup<L):
+            presion_media=presionEfectivaMedia(zfinf,zfsup)
+            listaTensionesFuste.append(presion_media)
+            listaLongitudesFuste.append(zfsup-zfinf)
+        
+        elif (zfinf<L) and (L<=zfsup):
+        
+            presion_media=presionEfectivaMedia(zfinf,L)
+            listaTensionesFuste.append(presion_media)
+            listaLongitudesFuste.append(L-zfinf)  
+            break # se llega al tope maximo
+
+
+    listaLongitudesFusteAcumulada=np.cumsum(listaLongitudesFuste)
+
+    for t in np.arange(0,len(listaTensionesFuste)):
+        fi_deg=fi[parametro_terreno(cotas,listaLongitudesFusteAcumulada[t])]
+        fi_rad=np.deg2rad(fi_deg) 
+        tf=listaTensionesFuste[t]*kr*f*np.tan(fi_rad)
+        #limitacion de 120 kPA
+        if tf>120:
+            tf=120
+        Qhfi=tf*np.pi*D*listaLongitudesFuste[t] # cargas de hundimieto parciales
+        listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
+        ListaTensionesHundimiento.append(Qhfi)
+
+    Qhf=np.sum(ListaTensionesHundimiento)
+
+    return listaTensionesUnitarias,Qhf
+
 
 
 
