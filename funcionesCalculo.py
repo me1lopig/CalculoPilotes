@@ -53,9 +53,9 @@ def reemplaza_None(lista, numero):
     return [numero if x is None else x for x in lista]
 
 
-def datos_terreno():
+def datos_terreno(archivo):
 
-    libro = openpyxl.load_workbook('datos_terreno_4.xlsx')
+    libro = openpyxl.load_workbook(archivo)
     hoja = libro.active
 
     # importacion de variables del terreno

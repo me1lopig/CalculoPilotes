@@ -19,7 +19,7 @@ import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 
 
 # importacion de datos del terreno del archivo datos_terreno.xlsx
-espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos=ft.datos_terreno()
+espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos=ft.datos_terreno('datos_terreno_4.xlsx')
 
 # importacion de los datos de los pilotes 
 diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes()
