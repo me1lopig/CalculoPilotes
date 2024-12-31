@@ -351,6 +351,29 @@ def qp_CTE_gr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L,fp):
     return qp,Qhp
 
 
+def qp_CTE_cohesivos(cotas,cu,D,L):
+    # calculo de la tensión unitaria por punta según el CTE suelos cohesivos
+    # cu, cohesion sin drenaje
+    # L longitud del pilote
+
+  
+    # valor promediado de cu
+    cu_promedio=promedioPunta(D,L,cotas,cu)
+
+    # factor de capacidad de carga
+    Np=9
+
+    # Cálculo de las tensiones unitarias 
+    qp=cu_promedio*Np # pilotes en KPa
+
+
+    # calculo de la carga de hundimiento y admisible
+    area=0.25*np.pi*D**2
+    Qhp=qp*area
+
+    return qp,Qhp
+
+
 def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
 
     # calculo de la tensión unitaria por punta según el CTE suelos granulares
@@ -436,6 +459,52 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
 
 
 
+
+def tf_CTE_cohesivos(cotas,cu,D,L):
+
+    # calculo de la tensión unitaria por punta según el CTE suelos granulares
+    # cu, cohesion sin drnaje
+    # D, diámetro del pilote
+    # L longitud del pilote
+
+    listafuste=cotas
+
+
+    # listados de resultados
+    listaCohesiones=[]
+    listaLongitudesFuste=[]
+    listaTensionesUnitarias=[]
+    ListaTensionesHundimiento=[]
+
+    for z in np.arange(0,len(listafuste)-1):
+
+        zfinf=listafuste[z]
+        zfsup=listafuste[z+1]
+
+
+        if (zfinf<L) and (zfsup<L):
+            cohesion=cu[parametro_terreno(cotas,zfinf)]
+            listaCohesiones.append(cohesion)
+            listaLongitudesFuste.append(zfsup-zfinf)
+        
+        elif (zfinf<L) and (L<=zfsup):
+        
+            cohesion=cu[parametro_terreno(cotas,zfinf)]
+            listaCohesiones.append(cohesion)
+            listaLongitudesFuste.append(L-zfinf)  
+            break # se llega al tope maximo
+
+
+    for t in np.arange(0,len(listaCohesiones)):
+ 
+        tf=(listaCohesiones[t]*100)/(100+(listaCohesiones[t]))
+        Qhfi=tf*np.pi*D*listaLongitudesFuste[t] # cargas de hundimieto parciales
+        listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
+        ListaTensionesHundimiento.append(Qhfi)
+
+    Qhf=np.sum(ListaTensionesHundimiento)
+
+    return listaTensionesUnitarias,Qhf
 
 
 

@@ -30,18 +30,38 @@ diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes()
 # graficas de las tensiones totales, efectivas y de poro del terreno según al archivo datos_terreno.xlsx
 #ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
-L=15
 
-qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,0.65,L,fp)
+print('Ejemplo de suelo granular')
+L=15
+D=0.65
+
+qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
 print('qp=',qp,'kPa')
 print('Qhp=',Qhp,'KN')
 print('Qadp=',Qhp/3,'KN')
 
 
 
-tensionesUnitarias,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,0.65,L,kr,f)
-print('Qhf=',Qhf)
-print('Qadf=',Qhf/3)
-print('Tansiones unitarias ',tensionesUnitarias)
+tensionesUnitarias,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
+print('Qhf=',Qhf,'kN')
+print('Qadf=',Qhf/3,'kN')
+print('Tansiones unitarias ',tensionesUnitarias,'KPa')
+print('Carga admisible')
+print('Qadm=',(Qhf+Qhp)/3,'kN')
+
+
+print('Ejemplo de suelo cohesivo')
+L=15
+D=0.65
+
+qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
+print('qp=',qp,'kPa')
+print('Qhp=',Qhp,'KN')
+print('Qadp=',Qhp/3,'KN')
+
+tensionesUnitarias,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
+print('Qhf=',Qhf,'kN')
+print('Qadf=',Qhf/3,'kN')
+print('Tansiones unitarias ',tensionesUnitarias,'KPa')
 print('Carga admisible')
 print('Qadm=',(Qhf+Qhp)/3,'kN')
