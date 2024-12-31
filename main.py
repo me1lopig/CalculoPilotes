@@ -31,7 +31,7 @@ diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes()
 #ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
 
-print('Ejemplo de suelo granular')
+print('Caso de suelo granular')
 L=15
 D=0.65
 
@@ -45,14 +45,14 @@ print('Qadp=',Qhp/3,'KN')
 tensionesUnitarias,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
 print('Qhf=',Qhf,'kN')
 print('Qadf=',Qhf/3,'kN')
-print('Tansiones unitarias ',tensionesUnitarias,'KPa')
+print('Tensiones unitarias ',tensionesUnitarias,'KPa')
 print('Carga admisible')
 print('Qadm=',(Qhf+Qhp)/3,'kN')
 
 
-print('Ejemplo de suelo cohesivo')
-L=15
-D=0.65
+print('Caso de suelo cohesivo')
+L=22
+D=0.90
 
 qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
 print('qp=',qp,'kPa')
@@ -62,6 +62,6 @@ print('Qadp=',Qhp/3,'KN')
 tensionesUnitarias,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
 print('Qhf=',Qhf,'kN')
 print('Qadf=',Qhf/3,'kN')
-print('Tansiones unitarias ',tensionesUnitarias,'KPa')
+print('Tensiones unitarias ',tensionesUnitarias,'KPa')
 print('Carga admisible')
 print('Qadm=',(Qhf+Qhp)/3,'kN')

@@ -48,10 +48,14 @@ def crea_directorio():
     return directorio
 
 
+def reemplaza_None(lista, numero):
+    # coloca un numero (0 en este caso) en los datos faltantes (None)
+    return [numero if x is None else x for x in lista]
+
 
 def datos_terreno():
 
-    libro = openpyxl.load_workbook('datos_terreno_2.xlsx')
+    libro = openpyxl.load_workbook('datos_terreno_4.xlsx')
     hoja = libro.active
 
     # importacion de variables del terreno
@@ -102,6 +106,12 @@ def datos_terreno():
     # se toman los datos de la cabecera
     for filas in hoja.iter_cols():
         tipo_datos.append(filas[0].value)
+
+    # Reemplazo de valores vacios por un 0
+    cu=reemplaza_None(cu, 0)
+    cohesion=reemplaza_None(cohesion, 0)
+    fi=reemplaza_None(fi, 0)
+    
 
     return espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos
 
@@ -335,7 +345,10 @@ def qp_CTE_gr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L,fp):
     fi_promedio=np.deg2rad(fi_promedio) # paso a radianes
 
     # factor de capacidad de carga
-    Nq=(1+np.sin(fi_promedio))/(1-np.sin(fi_promedio))*np.exp(np.pi*np.tan(fi_promedio))
+    if fi_promedio==0:
+        Nq=0
+    else:
+        Nq=(1+np.sin(fi_promedio))/(1-np.sin(fi_promedio))*np.exp(np.pi*np.tan(fi_promedio))
 
     # Cálculo de las tensiones unitarias 
     qp=fp*presionEfectiva*Nq # pilotes en KPa
@@ -483,13 +496,13 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
 
 
         if (zfinf<L) and (zfsup<L):
-            cohesion=cu[parametro_terreno(cotas,zfinf)]
+            cohesion=cu[parametro_terreno(cotas,(zfsup+zfinf)*0.5)]
             listaCohesiones.append(cohesion)
             listaLongitudesFuste.append(zfsup-zfinf)
         
         elif (zfinf<L) and (L<=zfsup):
         
-            cohesion=cu[parametro_terreno(cotas,zfinf)]
+            cohesion=cu[parametro_terreno(cotas,(zfsup+zfinf)*0.5)]
             listaCohesiones.append(cohesion)
             listaLongitudesFuste.append(L-zfinf)  
             break # se llega al tope maximo
