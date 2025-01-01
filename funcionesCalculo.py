@@ -7,6 +7,7 @@
 
     # datos_pilotes, importa los datos de los pilotes a calcular
     # datos_terreno, importa de una hoja excel los datos del terreno
+    # reemplaza_none, elimina los valores None de la toma de datos y los sustituye por un numero (0)
  
 
     # parametro_terreno, obtiene cualquier parámetro del terreno en función de la profundidad
@@ -14,7 +15,7 @@
 
     # insertar_valor inserta un valor en una lista y la ordena con el nuevo valor es función auxiliar de presion_total
     # obtener_maximo_menor calculamos el valor de la cota inferior del estrato superior más cercano a la cota que se introduce
-    #  es función  auxiliar de presion_total
+        #  es función  auxiliar de presion_total
     # insertar_valor, inserta un valor de forma ordenada dentro de una lista
 
     # presion_total, calcula la presión total en un punto del terreno
@@ -24,6 +25,12 @@
     # grafica_tensiones, calcula las tensiones en el intervalo de datos del archivo datos_terreno y da la grafica y la tabla
 
     # grafico_grupo, plotea varias magnitudes  o de forma individual
+
+    # qp_CTE_gr, calcula la resistencia en punta en el caso de situación drenada
+    # qp_CTE_cohesivos, calcula la resistencia en punta en el caso de situación no drenada
+
+    # tf_CTE_gr, calcula la resistencia en fuste en situación drenada
+    # tf_CTE_chesivos, calcula la resistencia en fuste en situación no drenada
 
 
 
@@ -67,17 +74,19 @@ def datos_terreno(archivo):
     pe_seco=[]
     pe_saturado=[]
     
-    tipo_datos=[]
     # valores de resistencia
     cu=[]
     cohesion=[]
     fi=[]
 
-    # tipo de calculo a realizar 
-    # (E,e) de tipo elástico
-    # (C,c) de tipo consolidación
+    # tipo de datos (encabezados)
+    tipo_datos=[]
+
+    # tipo de calculo a realizar, drenado o no drenado
     tipo_calculo=[]
-   
+
+    # Toma de datos de iteración
+
     for row in hoja.iter_rows():
         espesor.append(row[0].value)
         espesor[0]=0
@@ -91,13 +100,16 @@ def datos_terreno(archivo):
 
         cu.append(row[4].value)
         cu[0]=0
+
         cohesion.append(row[5].value)
         cohesion[0]=0
+
         fi.append(row[6].value)
         fi[0]=0
 
-        #tipo_calculo.append(row[10].value)
-        #tipo_calculo[0]=0
+        tipo_calculo.append(row[7].value)
+        tipo_calculo[0]=''
+
     nivel_freatico=hoja.cell(row=2, column=2).value
 
     for i in np.arange(len(espesor)):
@@ -107,19 +119,19 @@ def datos_terreno(archivo):
     for filas in hoja.iter_cols():
         tipo_datos.append(filas[0].value)
 
+
     # Reemplazo de valores vacios por un 0
     cu=reemplaza_None(cu, 0)
     cohesion=reemplaza_None(cohesion, 0)
     fi=reemplaza_None(fi, 0)
     
+    return espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos,tipo_calculo
 
-    return espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos
 
-
-def datos_pilotes():
+def datos_pilotes(archivo):
     # importacion de los datos de defición de los pilotes
 
-    libro = openpyxl.load_workbook('datos_pilotes.xlsx')
+    libro = openpyxl.load_workbook(archivo)
     hoja = libro.active
 
         # importacion de variables del terreno
@@ -238,10 +250,7 @@ def presion_total(cotas,valor_nf,pe_saturado,pe_seco,valor_cota):
     
     return presion_total
 
-def presionMedia():
-    # Calula la presion media por tramos
 
-    return 'hello'
 
 def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio):
     valor_z=np.arange(0,max(cotas)+0.10,0.10)
