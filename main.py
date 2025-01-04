@@ -19,16 +19,13 @@ import os
 import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 
 
-# importacion de datos del terreno del archivo de datos del terreno
 # ruta absoluta de los archivos de calculo
 carpeta=os.getcwd()
 carpeta=os.path.join(carpeta, 'Data/')
 archivo_terreno=os.path.join(carpeta,'datos_terreno_4.xlsx')
 archivo_pilotes=os.path.join(carpeta,'datos_pilotes.xlsx')
 
-print(archivo_pilotes)
-
-
+# importacion de datos del terreno
 espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos,tipo_calculo=ft.datos_terreno(archivo_terreno)
 
 # importacion de los datos de los pilotes 

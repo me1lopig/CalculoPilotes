@@ -56,7 +56,7 @@ def crea_directorio():
 
 
 def reemplaza_None(lista, numero):
-    # coloca un numero (0 en este caso) en los datos faltantes (None)
+    # coloca un numero (0 en este caso o cualquier otro) en los datos faltantes en la hoja excel de datos (None)
     return [numero if x is None else x for x in lista]
 
 
