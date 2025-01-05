@@ -39,7 +39,6 @@ ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
 
 
-
 # Datos geometricos de los pilotes (ejemplo)
 L=21
 D=0.75
@@ -56,37 +55,13 @@ else:
     print('Situacion de cálculo no considerada')
     print('Resvise los datos de entrada')
     exit()
-    # salida del programa 
-print('El cáculo para la situacion ',situacionCalculo,' es ',Qhp)
-
-print('Calculo a cascoporro')
-
-print('Caso de suelo granular')
-
-qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
-print('qp=',qp,'kPa')
-print('Qhp=',Qhp,'KN')
-print('Qadp=',Qhp/3,'KN')
+    # salida del programa
+print('Tension en la punta ',qp,' kPa')
+print('El Qhp para la situacion ',situacionCalculo,' es ',Qhp,' kN')
+print('El Qadp para la situacion ',situacionCalculo,' es ',Qhp/3,' kN')
 
 
-tensionesUnitarias,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
-print('Qhf=',Qhf,'kN')
-print('Qadf=',Qhf/3,'kN')
-print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-print('Carga admisible')
-print('Qadm=',(Qhf+Qhp)/3,'kN')
 
 
-print('Caso de suelo cohesivo')
 
-qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
-print('qp=',qp,'kPa')
-print('Qhp=',Qhp,'KN')
-print('Qadp=',Qhp/3,'KN')
 
-tensionesUnitarias,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
-print('Qhf=',Qhf,'kN')
-print('Qadf=',Qhf/3,'kN')
-print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-print('Carga admisible')
-print('Qadm=',(Qhf+Qhp)/3,'kN')
