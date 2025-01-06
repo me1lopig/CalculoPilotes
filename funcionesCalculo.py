@@ -375,6 +375,7 @@ def qp_CTE_gr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L,fp):
     return qp,Qhp
 
 
+
 def qp_CTE_cohesivos(cotas,cu,D,L):
     # calculo de la tensión unitaria por punta según el CTE suelos cohesivos
     # cu, cohesion sin drenaje

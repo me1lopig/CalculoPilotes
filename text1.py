@@ -22,7 +22,7 @@ import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 # ruta absoluta de los archivos de calculo
 carpeta=os.getcwd()
 carpeta=os.path.join(carpeta, 'Data/')
-archivo_terreno=os.path.join(carpeta,'datos_terreno_4.xlsx')
+archivo_terreno=os.path.join(carpeta,'datos_terreno_5.xlsx')
 archivo_pilotes=os.path.join(carpeta,'datos_pilotes.xlsx')
 
 # importacion de datos del terreno
@@ -31,11 +31,18 @@ espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos,ti
 # importacion de los datos de los pilotes 
 diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes(archivo_pilotes)
 
+# creacion del directorio de trabajo
+#directorio=ft.crea_directorio()
+
+# graficas de las tensiones totales, efectivas y de poro del terreno según al archivo datos_terreno.xlsx
+#ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
+
+
 
 
 # Datos geometricos de los pilotes (ejemplo)
-L=18
-D=0.75
+L=13
+D=0.60
 
 # control de longitud máxima no mas de prof max modelo-3D
 if L>(max(cotas)-3*D):
@@ -54,6 +61,10 @@ else:
     print('Situacion de cálculo no considerada')
     print('Revise los datos de entrada')
     exit()
+
+print('Tension hundimiento por punta')
+print('qp=',qp,'kPa')
+
 print('Carga de hundimiento por punta')
 print('Qhp=',Qhp,'kN')
 

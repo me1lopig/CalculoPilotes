@@ -19,10 +19,11 @@ import os
 import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 
 
+
 # ruta absoluta de los archivos de calculo
 carpeta=os.getcwd()
 carpeta=os.path.join(carpeta, 'Data/')
-archivo_terreno=os.path.join(carpeta,'datos_terreno_4.xlsx')
+archivo_terreno=os.path.join(carpeta,'datos_terreno_5.xlsx')
 archivo_pilotes=os.path.join(carpeta,'datos_pilotes.xlsx')
 
 # importacion de datos del terreno
@@ -38,8 +39,8 @@ directorio=ft.crea_directorio()
 ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
 # Datos geometricos de los pilotes (ejemplo)
-L=24
-D=0.65
+L=13
+D=0.60
 
 # control de longitud máxima no mas de prof max modelo-3D
 if L>(max(cotas)-3*D):
@@ -50,9 +51,9 @@ if L>(max(cotas)-3*D):
 # Calculo de la tensión en punta a la profundidad L
 situacionCalculo=tipo_calculo[ft.parametro_terreno(cotas,L)]
 
-if situacionCalculo=='Drenado':
+if situacionCalculo=='d':
     qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
-elif situacionCalculo=='No drenado':
+elif situacionCalculo=='nd':
     qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
 else:
     print('Situacion de cálculo no considerada')
