@@ -37,56 +37,35 @@ directorio=ft.crea_directorio()
 # graficas de las tensiones totales, efectivas y de poro del terreno según al archivo datos_terreno.xlsx
 ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
-
-
-
 # Datos geometricos de los pilotes (ejemplo)
-L=21
-D=0.75
+L=24
+D=0.65
+
+# control de longitud máxima no mas de prof max modelo-3D
+if L>(max(cotas)-3*D):
+    print('Longitud fuera del modelo')
+    print('Se interrumpe el programa')
+    exit()
 
 # Calculo de la tensión en punta a la profundidad L
-
 situacionCalculo=tipo_calculo[ft.parametro_terreno(cotas,L)]
 
-if situacionCalculo=='d':
+if situacionCalculo=='Drenado':
     qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
-elif situacionCalculo=='nd':
+elif situacionCalculo=='No drenado':
     qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
 else:
     print('Situacion de cálculo no considerada')
-    print('Resvise los datos de entrada')
+    print('Revise los datos de entrada')
     exit()
-    # salida del programa 
-print('El cáculo para la situacion ',situacionCalculo,' es ',Qhp)
 
-print('Calculo a cascoporro')
+# guardamos los resultados en un archivo de texto
 
-print('Caso de suelo granular')
+f=open(directorio+'/calculosPunta.txt','w')
+f.write('Diámetro='+str(D)+'m\n')
+f.write('Longitud='+str(L)+'m\n')
+f.write('Tension en la punta '+str(qp)+' kPa\n')
+f.write('El Qhp para la situacion '+str(situacionCalculo)+' es '+str(Qhp)+' kN\n')
+f.write('El Qadp para la situacion '+str(situacionCalculo)+' es '+str(Qhp/3)+' kN')
 
-qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
-print('qp=',qp,'kPa')
-print('Qhp=',Qhp,'KN')
-print('Qadp=',Qhp/3,'KN')
-
-
-tensionesUnitarias,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
-print('Qhf=',Qhf,'kN')
-print('Qadf=',Qhf/3,'kN')
-print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-print('Carga admisible')
-print('Qadm=',(Qhf+Qhp)/3,'kN')
-
-
-print('Caso de suelo cohesivo')
-
-qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
-print('qp=',qp,'kPa')
-print('Qhp=',Qhp,'KN')
-print('Qadp=',Qhp/3,'KN')
-
-tensionesUnitarias,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
-print('Qhf=',Qhf,'kN')
-print('Qadf=',Qhf/3,'kN')
-print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-print('Carga admisible')
-print('Qadm=',(Qhf+Qhp)/3,'kN')
+f.close()

@@ -410,8 +410,6 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
         # kr=1 hncados  
         # kr=0.75 perforados
 
-
-
     # Cálculo de las tensiones efectivas medias en el nivel considerado
 
     def presionEfectivaMedia(zfinf,zfsup):
@@ -441,7 +439,7 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
     listaTensionesFuste=[]
     listaLongitudesFuste=[]
     listaTensionesUnitarias=[]
-    ListaTensionesHundimiento=[]
+    ListaCargaHundimiento=[]
 
     for z in np.arange(0,len(listafuste)-1):
 
@@ -466,18 +464,18 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
 
     for t in np.arange(0,len(listaTensionesFuste)):
         fi_deg=fi[parametro_terreno(cotas,listaLongitudesFusteAcumulada[t])]
-        fi_rad=np.deg2rad(fi_deg) 
+        fi_rad=float(np.deg2rad(fi_deg))
         tf=listaTensionesFuste[t]*kr*f*np.tan(fi_rad)
         #limitacion de 120 kPA
         if tf>120:
             tf=120
         Qhfi=tf*np.pi*D*listaLongitudesFuste[t] # cargas de hundimieto parciales
         listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
-        ListaTensionesHundimiento.append(Qhfi)
+        ListaCargaHundimiento.append(Qhfi)
 
-    Qhf=np.sum(ListaTensionesHundimiento)
+    Qhf=np.sum(ListaCargaHundimiento)
 
-    return listaTensionesUnitarias,Qhf
+    return listaTensionesUnitarias,ListaCargaHundimiento,listaLongitudesFusteAcumulada,Qhf
 
 
 
@@ -496,7 +494,7 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
     listaCohesiones=[]
     listaLongitudesFuste=[]
     listaTensionesUnitarias=[]
-    ListaTensionesHundimiento=[]
+    ListaCargaHundimiento=[]
 
     for z in np.arange(0,len(listafuste)-1):
 
@@ -522,11 +520,11 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
         tf=(listaCohesiones[t]*100)/(100+(listaCohesiones[t]))
         Qhfi=tf*np.pi*D*listaLongitudesFuste[t] # cargas de hundimieto parciales
         listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
-        ListaTensionesHundimiento.append(Qhfi)
+        ListaCargaHundimiento.append(Qhfi)
 
-    Qhf=np.sum(ListaTensionesHundimiento)
+    Qhf=np.sum(ListaCargaHundimiento)
 
-    return listaTensionesUnitarias,Qhf
+    return listaTensionesUnitarias,ListaCargaHundimiento,Qhf
 
 
 

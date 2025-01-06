@@ -31,37 +31,44 @@ espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos,ti
 # importacion de los datos de los pilotes 
 diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes(archivo_pilotes)
 
-# creacion del directorio de trabajo
-directorio=ft.crea_directorio()
-
-# graficas de las tensiones totales, efectivas y de poro del terreno según al archivo datos_terreno.xlsx
-ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
-
 
 
 # Datos geometricos de los pilotes (ejemplo)
 L=21
 D=0.75
 
-# Calculo de la tensión en punta a la profundidad L
-
-situacionCalculo=tipo_calculo[ft.parametro_terreno(cotas,L)]
-
-if situacionCalculo=='d':
-    qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
-elif situacionCalculo=='nd':
-    qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
-else:
-    print('Situacion de cálculo no considerada')
-    print('Resvise los datos de entrada')
-    exit()
-    # salida del programa
-print('Tension en la punta ',qp,' kPa')
-print('El Qhp para la situacion ',situacionCalculo,' es ',Qhp,' kN')
-print('El Qadp para la situacion ',situacionCalculo,' es ',Qhp/3,' kN')
 
 
+print('Caso de suelo granular')
 
 
+tensionesUnitarias,ListaCargaHundimiento,ListaLongitudesFusteAcumuladas,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
+#print('Qhf=',Qhf,'kN')
+#print('Qadf=',Qhf/3,'kN')
+#print('Tensiones unitarias ',tensionesUnitarias,'KPa')
+print('Carga hundimiento ')
+print(ListaCargaHundimiento,'KN')
+#print('Carga admisible')
+#print('Qadm=',(Qhf)/3,'kN')
 
 
+#print('Partes de la carga de hundimiento fuste')
+
+print('Lista longitudes fuste acumuladas ')
+print(ListaLongitudesFusteAcumuladas)
+
+
+#print('Caso de suelo cohesivo')
+
+#qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
+#print('qp=',qp,'kPa')
+#print('Qhp=',Qhp,'KN')
+#print('Qadp=',Qhp/3,'KN')
+
+#tensionesUnitarias,ListaCargaHundimiento,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
+#print('Qhf=',Qhf,'kN')
+#print('Qadf=',Qhf/3,'kN')
+#print('Tensiones unitarias ',tensionesUnitarias,'KPa')
+#print('Carga hundimiento ',ListaCargaHundimiento,'KN')
+#print('Carga admisible')
+#print('Qadm=',(Qhf+Qhp)/3,'kN')
