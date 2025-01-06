@@ -532,20 +532,26 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
 
 
 
+def cargaHundimientoFuste(ListaLongitudesFusteAcumuladasGr,ListaLongitudesFusteAcumuladasCo,ListaCargaHundimientoGr,ListaCargaHundimientoCo,cotas,tipo_calculo):
+    
+    # seleccion del tipo de cargas por fuste
+    Qhf=0
+
+    # seleccion de las cargas por fuste situacion drenada
+    for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasGr)):
+        zt=ListaLongitudesFusteAcumuladasGr[tipo]
+        tipoCalculo=tipo_calculo[parametro_terreno(cotas,zt)]
+        if tipoCalculo=='d':
+            Qhf+=ListaCargaHundimientoGr[tipo]
 
 
+    # seleccion de las cargas por fuste situacion nodrenada
+    for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasCo)):
+        zt=ListaLongitudesFusteAcumuladasCo[tipo]
+        tipoCalculo=tipo_calculo[parametro_terreno(cotas,zt)]
+        if tipoCalculo=='nd':
+            Qhf+=ListaCargaHundimientoCo[tipo]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+    return Qhf
 

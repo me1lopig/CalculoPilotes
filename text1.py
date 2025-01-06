@@ -34,7 +34,7 @@ diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes(archivo_pilotes)
 
 
 # Datos geometricos de los pilotes (ejemplo)
-L=21
+L=18
 D=0.75
 
 
@@ -53,16 +53,30 @@ print('Tensiones unitarias ',tensionesUnitariasCo,'KPa')
 print('Carga hundimiento ',ListaCargaHundimientoCo,'KN')
 print('Lista longitudes fuste acumuladas ',ListaLongitudesFusteAcumuladasCo,'m')
 
-print('Tipo de calculo')
-print(tipo_calculo)
+# seleccion del tipo de cargas por fuste
+Qhf=0
 
-print(cotas)
-
-# seleccion del tipo de cálculo 
+# seleccion de las cargas por fuste situacion drenada
 for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasGr)):
     zt=ListaLongitudesFusteAcumuladasGr[tipo]
-    print(zt,tipo_calculo[ft.parametro_terreno(cotas,zt)])
+    tipoCalculo=tipo_calculo[ft.parametro_terreno(cotas,zt)]
+    if tipoCalculo=='d':
+        Qhf+=ListaCargaHundimientoGr[tipo]
 
 
+# seleccion de las cargas por fuste situacion nodrenada
+for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasCo)):
+    zt=ListaLongitudesFusteAcumuladasCo[tipo]
+    tipoCalculo=tipo_calculo[ft.parametro_terreno(cotas,zt)]
+    if tipoCalculo=='nd':
+        Qhf+=ListaCargaHundimientoCo[tipo]
 
+
+print('Qhf=',Qhf)
+
+print('usando función directa')
+
+qhf2=ft.cargaHundimientoFuste(ListaLongitudesFusteAcumuladasGr,ListaLongitudesFusteAcumuladasCo,ListaCargaHundimientoGr,ListaCargaHundimientoCo,cotas,tipo_calculo)
+
+print('Qhf2=',qhf2)
 
