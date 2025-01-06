@@ -37,8 +37,28 @@ diametros,Lmin,Lincr,fp,kr,f=ft.datos_pilotes(archivo_pilotes)
 L=18
 D=0.75
 
+# control de longitud máxima no mas de prof max modelo-3D
+if L>(max(cotas)-3*D):
+    print('Longitud fuera del modelo')
+    print('Se interrumpe el programa')
+    exit()
 
-# Suelo Granular
+# Calculo de la tensión en punta a la profundidad L
+situacionCalculo=tipo_calculo[ft.parametro_terreno(cotas,L)]
+
+if situacionCalculo=='d':
+    qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
+elif situacionCalculo=='nd':
+    qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
+else:
+    print('Situacion de cálculo no considerada')
+    print('Revise los datos de entrada')
+    exit()
+print('Carga de hundimiento por punta')
+print('Qhp=',Qhp,'kN')
+
+# Suelo Granular fuste
+print()
 print('Caso de suelo granular')
 tensionesUnitariasGr,ListaCargaHundimientoGr,ListaLongitudesFusteAcumuladasGr=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f,tipo_calculo)
 print('Tensiones unitarias ',tensionesUnitariasGr,'KPa')
@@ -46,7 +66,8 @@ print('Carga hundimiento ',ListaCargaHundimientoGr,'KN')
 print('Lista longitudes fuste acumuladas ',ListaLongitudesFusteAcumuladasGr,'m')
 
 
-# Suelo Cohesivo
+# Suelo Cohesivo fuste
+print()
 print('Caso de suelo cohesivo')
 tensionesUnitariasCo,ListaCargaHundimientoCo,ListaLongitudesFusteAcumuladasCo=ft.tf_CTE_cohesivos(cotas,cu,D,L)
 print('Tensiones unitarias ',tensionesUnitariasCo,'KPa')
@@ -71,12 +92,22 @@ for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasCo)):
     if tipoCalculo=='nd':
         Qhf+=ListaCargaHundimientoCo[tipo]
 
+print()
+print('Carga de hundimiento por fuste')
+print('Qhf=',Qhf,'kN')
 
-print('Qhf=',Qhf)
 
+print()
 print('usando función directa')
+Qhf2=ft.cargaHundimientoFuste(ListaLongitudesFusteAcumuladasGr,ListaLongitudesFusteAcumuladasCo,ListaCargaHundimientoGr,ListaCargaHundimientoCo,cotas,tipo_calculo)
+print('Qhf2=',Qhf2,'kN')
 
-qhf2=ft.cargaHundimientoFuste(ListaLongitudesFusteAcumuladasGr,ListaLongitudesFusteAcumuladasCo,ListaCargaHundimientoGr,ListaCargaHundimientoCo,cotas,tipo_calculo)
 
-print('Qhf2=',qhf2)
-
+print()
+print('Resumen\n')
+print('Carga de hundimiento por fuste')
+print('Qhf=',Qhf2,'kN')
+print('Carga de hundimiento por punta')
+print('Qhp=',Qhp,'kN')
+print('Qh ',Qhf2+Qhp,' kN')
+print('Qadm ',(Qhf2+Qhp)/3,' kN')
