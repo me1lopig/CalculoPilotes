@@ -38,37 +38,31 @@ L=21
 D=0.75
 
 
-
+# Suelo Granular
 print('Caso de suelo granular')
+tensionesUnitariasGr,ListaCargaHundimientoGr,ListaLongitudesFusteAcumuladasGr=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f,tipo_calculo)
+print('Tensiones unitarias ',tensionesUnitariasGr,'KPa')
+print('Carga hundimiento ',ListaCargaHundimientoGr,'KN')
+print('Lista longitudes fuste acumuladas ',ListaLongitudesFusteAcumuladasGr,'m')
 
 
-tensionesUnitarias,ListaCargaHundimiento,ListaLongitudesFusteAcumuladas,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
-#print('Qhf=',Qhf,'kN')
-#print('Qadf=',Qhf/3,'kN')
-#print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-print('Carga hundimiento ')
-print(ListaCargaHundimiento,'KN')
-#print('Carga admisible')
-#print('Qadm=',(Qhf)/3,'kN')
+# Suelo Cohesivo
+print('Caso de suelo cohesivo')
+tensionesUnitariasCo,ListaCargaHundimientoCo,ListaLongitudesFusteAcumuladasCo=ft.tf_CTE_cohesivos(cotas,cu,D,L)
+print('Tensiones unitarias ',tensionesUnitariasCo,'KPa')
+print('Carga hundimiento ',ListaCargaHundimientoCo,'KN')
+print('Lista longitudes fuste acumuladas ',ListaLongitudesFusteAcumuladasCo,'m')
+
+print('Tipo de calculo')
+print(tipo_calculo)
+
+print(cotas)
+
+# seleccion del tipo de cálculo 
+for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasGr)):
+    zt=ListaLongitudesFusteAcumuladasGr[tipo]
+    print(zt,tipo_calculo[ft.parametro_terreno(cotas,zt)])
 
 
-#print('Partes de la carga de hundimiento fuste')
-
-print('Lista longitudes fuste acumuladas ')
-print(ListaLongitudesFusteAcumuladas)
 
 
-#print('Caso de suelo cohesivo')
-
-#qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
-#print('qp=',qp,'kPa')
-#print('Qhp=',Qhp,'KN')
-#print('Qadp=',Qhp/3,'KN')
-
-#tensionesUnitarias,ListaCargaHundimiento,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
-#print('Qhf=',Qhf,'kN')
-#print('Qadf=',Qhf/3,'kN')
-#print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-#print('Carga hundimiento ',ListaCargaHundimiento,'KN')
-#print('Carga admisible')
-#print('Qadm=',(Qhf+Qhp)/3,'kN')

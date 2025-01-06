@@ -110,6 +110,8 @@ def datos_terreno(archivo):
         tipo_calculo.append(row[7].value)
         tipo_calculo[0]=''
 
+
+
     nivel_freatico=hoja.cell(row=2, column=2).value
 
     for i in np.arange(len(espesor)):
@@ -396,7 +398,7 @@ def qp_CTE_cohesivos(cotas,cu,D,L):
     return qp,Qhp
 
 
-def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
+def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f,tipo_calculo):
 
     # calculo de la tensión unitaria por punta según el CTE suelos granulares
     # fi, ángulo de rozamiento
@@ -465,6 +467,8 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
     for t in np.arange(0,len(listaTensionesFuste)):
         fi_deg=fi[parametro_terreno(cotas,listaLongitudesFusteAcumulada[t])]
         fi_rad=float(np.deg2rad(fi_deg))
+
+
         tf=listaTensionesFuste[t]*kr*f*np.tan(fi_rad)
         #limitacion de 120 kPA
         if tf>120:
@@ -473,9 +477,7 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
         listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
         ListaCargaHundimiento.append(Qhfi)
 
-    Qhf=np.sum(ListaCargaHundimiento)
-
-    return listaTensionesUnitarias,ListaCargaHundimiento,listaLongitudesFusteAcumulada,Qhf
+    return listaTensionesUnitarias,ListaCargaHundimiento,listaLongitudesFusteAcumulada
 
 
 
@@ -514,6 +516,7 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
             listaLongitudesFuste.append(L-zfinf)  
             break # se llega al tope maximo
 
+    listaLongitudesFusteAcumulada=np.cumsum(listaLongitudesFuste)
 
     for t in np.arange(0,len(listaCohesiones)):
  
@@ -522,9 +525,9 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
         listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
         ListaCargaHundimiento.append(Qhfi)
 
-    Qhf=np.sum(ListaCargaHundimiento)
 
-    return listaTensionesUnitarias,ListaCargaHundimiento,Qhf
+
+    return listaTensionesUnitarias,ListaCargaHundimiento,listaLongitudesFusteAcumulada
 
 
 
