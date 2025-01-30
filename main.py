@@ -39,7 +39,7 @@ directorio=ft.crea_directorio()
 ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
 # Datos geometricos de los pilotes (ejemplo)
-L=13
+L=10
 D=0.60
 
 # control de longitud máxima no mas de prof max modelo-3D
