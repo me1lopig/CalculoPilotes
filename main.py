@@ -19,16 +19,14 @@ import os
 import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 
 
-# importacion de datos del terreno del archivo de datos del terreno
+
 # ruta absoluta de los archivos de calculo
 carpeta=os.getcwd()
 carpeta=os.path.join(carpeta, 'Data/')
-archivo_terreno=os.path.join(carpeta,'datos_terreno_4.xlsx')
+archivo_terreno=os.path.join(carpeta,'datos_terreno_5.xlsx')
 archivo_pilotes=os.path.join(carpeta,'datos_pilotes.xlsx')
 
-print(archivo_pilotes)
-
-
+# importacion de datos del terreno
 espesor,cotas,az,nivel_freatico,pe_seco,pe_saturado,cu,cohesion,fi,tipo_datos,tipo_calculo=ft.datos_terreno(archivo_terreno)
 
 # importacion de los datos de los pilotes 
@@ -41,35 +39,34 @@ directorio=ft.crea_directorio()
 ft.grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio)
 
 # Datos geometricos de los pilotes (ejemplo)
-L=21
-D=0.75
+L=10
+D=0.60
 
-print('Caso de suelo granular')
+# control de longitud máxima no mas de prof max modelo-3D
+if L>(max(cotas)-3*D):
+    print('Longitud fuera del modelo')
+    print('Se interrumpe el programa')
+    exit()
 
-qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
-print('qp=',qp,'kPa')
-print('Qhp=',Qhp,'KN')
-print('Qadp=',Qhp/3,'KN')
+# Calculo de la tensión en punta a la profundidad L
+situacionCalculo=tipo_calculo[ft.parametro_terreno(cotas,L)]
 
+if situacionCalculo=='d':
+    qp,Qhp=ft.qp_CTE_gr(cotas,nivel_freatico,pe_saturado,pe_seco,fi,D,L,fp)
+elif situacionCalculo=='nd':
+    qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
+else:
+    print('Situacion de cálculo no considerada')
+    print('Revise los datos de entrada')
+    exit()
 
-tensionesUnitarias,Qhf=ft.tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f)
-print('Qhf=',Qhf,'kN')
-print('Qadf=',Qhf/3,'kN')
-print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-print('Carga admisible')
-print('Qadm=',(Qhf+Qhp)/3,'kN')
+# guardamos los resultados en un archivo de texto
 
+f=open(directorio+'/calculosPunta.txt','w')
+f.write('Diámetro='+str(D)+'m\n')
+f.write('Longitud='+str(L)+'m\n')
+f.write('Tension en la punta '+str(qp)+' kPa\n')
+f.write('El Qhp para la situacion '+str(situacionCalculo)+' es '+str(Qhp)+' kN\n')
+f.write('El Qadp para la situacion '+str(situacionCalculo)+' es '+str(Qhp/3)+' kN')
 
-#print('Caso de suelo cohesivo')
-
-#qp,Qhp=ft.qp_CTE_cohesivos(cotas,cu,D,L)
-#print('qp=',qp,'kPa')
-#print('Qhp=',Qhp,'KN')
-#print('Qadp=',Qhp/3,'KN')
-
-#tensionesUnitarias,Qhf=ft.tf_CTE_cohesivos(cotas,cu,D,L)
-#print('Qhf=',Qhf,'kN')
-#print('Qadf=',Qhf/3,'kN')
-#print('Tensiones unitarias ',tensionesUnitarias,'KPa')
-#print('Carga admisible')
-#print('Qadm=',(Qhf+Qhp)/3,'kN')
+f.close()

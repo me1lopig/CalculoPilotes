@@ -56,7 +56,7 @@ def crea_directorio():
 
 
 def reemplaza_None(lista, numero):
-    # coloca un numero (0 en este caso) en los datos faltantes (None)
+    # coloca un numero (0 en este caso o cualquier otro) en los datos faltantes en la hoja excel de datos (None)
     return [numero if x is None else x for x in lista]
 
 
@@ -109,6 +109,8 @@ def datos_terreno(archivo):
 
         tipo_calculo.append(row[7].value)
         tipo_calculo[0]=''
+
+
 
     nivel_freatico=hoja.cell(row=2, column=2).value
 
@@ -373,6 +375,7 @@ def qp_CTE_gr(cotas,valor_nf,pe_saturado,pe_seco,fi,D,L,fp):
     return qp,Qhp
 
 
+
 def qp_CTE_cohesivos(cotas,cu,D,L):
     # calculo de la tensión unitaria por punta según el CTE suelos cohesivos
     # cu, cohesion sin drenaje
@@ -396,7 +399,7 @@ def qp_CTE_cohesivos(cotas,cu,D,L):
     return qp,Qhp
 
 
-def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
+def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f,tipo_calculo):
 
     # calculo de la tensión unitaria por punta según el CTE suelos granulares
     # fi, ángulo de rozamiento
@@ -409,8 +412,6 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
     # kr factor que depende del proceso constructivo 
         # kr=1 hncados  
         # kr=0.75 perforados
-
-
 
     # Cálculo de las tensiones efectivas medias en el nivel considerado
 
@@ -441,7 +442,7 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
     listaTensionesFuste=[]
     listaLongitudesFuste=[]
     listaTensionesUnitarias=[]
-    ListaTensionesHundimiento=[]
+    ListaCargaHundimiento=[]
 
     for z in np.arange(0,len(listafuste)-1):
 
@@ -466,18 +467,18 @@ def tf_CTE_gr(cotas,nivel_freatico,pe_seco,pe_saturado,fi,D,L,kr,f):
 
     for t in np.arange(0,len(listaTensionesFuste)):
         fi_deg=fi[parametro_terreno(cotas,listaLongitudesFusteAcumulada[t])]
-        fi_rad=np.deg2rad(fi_deg) 
+        fi_rad=float(np.deg2rad(fi_deg))
+
+
         tf=listaTensionesFuste[t]*kr*f*np.tan(fi_rad)
         #limitacion de 120 kPA
         if tf>120:
             tf=120
         Qhfi=tf*np.pi*D*listaLongitudesFuste[t] # cargas de hundimieto parciales
         listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
-        ListaTensionesHundimiento.append(Qhfi)
+        ListaCargaHundimiento.append(Qhfi)
 
-    Qhf=np.sum(ListaTensionesHundimiento)
-
-    return listaTensionesUnitarias,Qhf
+    return listaTensionesUnitarias,ListaCargaHundimiento,listaLongitudesFusteAcumulada
 
 
 
@@ -496,7 +497,7 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
     listaCohesiones=[]
     listaLongitudesFuste=[]
     listaTensionesUnitarias=[]
-    ListaTensionesHundimiento=[]
+    ListaCargaHundimiento=[]
 
     for z in np.arange(0,len(listafuste)-1):
 
@@ -516,35 +517,42 @@ def tf_CTE_cohesivos(cotas,cu,D,L):
             listaLongitudesFuste.append(L-zfinf)  
             break # se llega al tope maximo
 
+    listaLongitudesFusteAcumulada=np.cumsum(listaLongitudesFuste)
 
     for t in np.arange(0,len(listaCohesiones)):
  
         tf=(listaCohesiones[t]*100)/(100+(listaCohesiones[t]))
         Qhfi=tf*np.pi*D*listaLongitudesFuste[t] # cargas de hundimieto parciales
         listaTensionesUnitarias.append(tf) # creacion de la lista de las tensiones unitarias
-        ListaTensionesHundimiento.append(Qhfi)
-
-    Qhf=np.sum(ListaTensionesHundimiento)
-
-    return listaTensionesUnitarias,Qhf
+        ListaCargaHundimiento.append(Qhfi)
 
 
+
+    return listaTensionesUnitarias,ListaCargaHundimiento,listaLongitudesFusteAcumulada
 
 
 
 
+def cargaHundimientoFuste(ListaLongitudesFusteAcumuladasGr,ListaLongitudesFusteAcumuladasCo,ListaCargaHundimientoGr,ListaCargaHundimientoCo,cotas,tipo_calculo):
+    
+    # seleccion del tipo de cargas por fuste
+    Qhf=0
+
+    # seleccion de las cargas por fuste situacion drenada
+    for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasGr)):
+        zt=ListaLongitudesFusteAcumuladasGr[tipo]
+        tipoCalculo=tipo_calculo[parametro_terreno(cotas,zt)]
+        if tipoCalculo=='d':
+            Qhf+=ListaCargaHundimientoGr[tipo]
 
 
+    # seleccion de las cargas por fuste situacion nodrenada
+    for tipo in np.arange(0,len(ListaLongitudesFusteAcumuladasCo)):
+        zt=ListaLongitudesFusteAcumuladasCo[tipo]
+        tipoCalculo=tipo_calculo[parametro_terreno(cotas,zt)]
+        if tipoCalculo=='nd':
+            Qhf+=ListaCargaHundimientoCo[tipo]
 
 
-
-
-
-
-
-
-
-
-
-
+    return Qhf
 
