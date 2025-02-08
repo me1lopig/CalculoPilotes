@@ -281,6 +281,11 @@ def grafica_tensiones(cotas,pe_seco,pe_saturado,nivel_freatico,directorio):
     lista_datos = [presionE, presionT, presionP]
     grafico_grupo(lista_datos, "Tensiones en el terreno",'kN/m2',directorio)
 
+    # creacion de la tabla de datos en excel
+    encabezados=['Profundidad (m)','Presion de Poro kN/m2','Presion efectiva kN/m2','Presion total kN/m2']
+    guardar_listas_en_excel(directorio+'/TensionesTerreno.xlsx', encabezados, valor_z,presionPoro,presionEfectiva,presionTotal)
+
+
 
 
 def grafico_grupo(lista_datos, titulo,etiqueta_x,directorio):
