@@ -1,42 +1,38 @@
 import openpyxl
-import numpy as np
-
-#encabezados
-encabezados=['Tensiones 1','tensiones 2','Tensiones 3']
 
 
 
-# Listas de ejemplo
-lista1 = [1, 2, 3, 4, 5]
-lista2 = ['A', 'B', 'C', 'D', 'E']
-lista3 = [10.5, 20.3, 30.1, 40.7, 50.9]
+# Función que acepta un número variable de listas y encabezados
+def guardar_listas_en_excel(nombre_archivo, encabezados, *listas):
+    # Verificar que el número de encabezados coincida con el número de listas
+    if len(encabezados) != len(listas):
+        raise ValueError("El número de encabezados debe coincidir con el número de listas.")
 
-
-def datos2excel(encabezados,lista1,lista2,lista3):
-
-# Crear un nuevo libro de trabajo y seleccionar la hoja activa
+    # Crear un nuevo libro de trabajo y seleccionar la hoja activa
     libro = openpyxl.Workbook()
     hoja = libro.active
 
-# colocar encabezados
-    for i in np.arange(0,len(encabezados)):
-        hoja.cell(row=1, column=i+1, value=encabezados[i])
+    # Escribir los encabezados en la primera fila
+    for columna, encabezado in enumerate(encabezados, start=1):
+        hoja.cell(row=1, column=columna, value=encabezado)
 
+    # Escribir cada lista en una columna diferente, empezando desde la segunda fila
+    for columna, lista in enumerate(listas, start=1):
+        for fila, valor in enumerate(lista, start=2):  # Empezar desde la fila 2
+            hoja.cell(row=fila, column=columna, value=valor)
 
+    # Guardar el archivo Excel
+    libro.save(nombre_archivo)
+    print(f"Archivo Excel '{nombre_archivo}' guardado correctamente.")
 
-# Escribir las listas en columnas diferentes
-    for i in np.arange(0,len(lista1)):
-        hoja.cell(row=i+2, column=1, value=lista1[i])
-        hoja.cell(row=i+2, column=2, value=lista2[i])
-        hoja.cell(row=i+2, column=3, value=lista3[i])
+# Ejemplo de uso
+lista1 = [1, 2, 3, 4, 5]
+lista2 = ['A', 'B', 'C', 'D', 'E']
+lista3 = ['001', '002', '003', '004', '005']
+lista4 = [10.5, 20.3, 30.1, 40.7, 50.9]
 
+# Lista de encabezados
+encabezados = ["Números", "Letras", "Códigos", "Decimales"]
 
-# Guardar el archivo Excel
-    libro.save('listas_en_columnas.xlsx')
-
-    print("Archivo Excel guardado correctamente.")
-
-
-
-
-datos2excel(encabezados,lista1,lista2,lista3)
+# Llamar a la función con encabezados y listas
+guardar_listas_en_excel('listas_en_columnas.xlsx', encabezados, lista1, lista2, lista3, lista4)

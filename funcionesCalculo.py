@@ -32,6 +32,7 @@
     # tf_CTE_gr, calcula la resistencia en fuste en situación drenada
     # tf_CTE_chesivos, calcula la resistencia en fuste en situación no drenada
 
+    #  guardar_listas_en_excel, guarda valores calculados en una hoja excel
 
 
 # librerias 
@@ -556,3 +557,29 @@ def cargaHundimientoFuste(ListaLongitudesFusteAcumuladasGr,ListaLongitudesFusteA
 
     return Qhf
 
+
+
+
+def guardar_listas_en_excel(nombre_archivo, encabezados, *listas):
+
+    # Función que acepta un número variable de listas y encabezados
+    # Verificar que el número de encabezados coincida con el número de listas
+    if len(encabezados) != len(listas):
+        raise ValueError("El número de encabezados debe coincidir con el número de listas.")
+
+    # Crear un nuevo libro de trabajo y seleccionar la hoja activa
+    libro = openpyxl.Workbook()
+    hoja = libro.active
+
+    # Escribir los encabezados en la primera fila
+    for columna, encabezado in enumerate(encabezados, start=1):
+        hoja.cell(row=1, column=columna, value=encabezado)
+
+    # Escribir cada lista en una columna diferente, empezando desde la segunda fila
+    for columna, lista in enumerate(listas, start=1):
+        for fila, valor in enumerate(lista, start=2):  # Empezar desde la fila 2
+            hoja.cell(row=fila, column=columna, value=valor)
+
+    # Guardar el archivo Excel
+    libro.save(nombre_archivo)
+    print(f"Archivo Excel '{nombre_archivo}' guardado correctamente.")
