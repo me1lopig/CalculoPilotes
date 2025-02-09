@@ -1,0 +1,5 @@
+Diámetro=0.6m
+Longitud=10m
+Tension en la punta 239.60526315789474 kPa
+El Qhp para la situacion nd es 67.74679210484621 kN
+El Qadp para la situacion nd es 22.582264034948736 kN

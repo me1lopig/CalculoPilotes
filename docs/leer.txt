@@ -1,0 +1,35 @@
+mi_proyecto/
+??? docs/                   # Documentacion del proyecto
+?   ??? README.md           # Descripcion general del proyecto
+?   ??? requisitos.md       # Requisitos del proyecto
+?   ??? manual_usuario.md   # Manual de usuario
+??? src/                    # Codigo fuente del proyecto
+?   ??? __init__.py         # Archivo de inicializacion del paquete
+?   ??? main.py             # Archivo principal del programa
+?   ??? modulo1.py          # Modulo 1
+?   ??? modulo2.py          # Modulo 2
+??? tests/                  # Pruebas del proyecto
+?   ??? __init__.py         # Archivo de inicializaci�n del paquete de pruebas
+?   ??? test_modulo1.py     # Pruebas para el modulo 1
+?   ??? test_modulo2.py     # Pruebas para el modulo 2
+??? data/                   # Datos utilizados por el proyecto
+?   ??? raw/                # Datos sin procesar
+?   ??? processed/          # Datos procesados
+??? scripts/                # Scripts auxiliares
+?   ??? script_ejemplo.py   # Ejemplo de script auxiliar
+??? .gitignore              # Archivos y carpetas a ignorar por Git
+??? requirements.txt        # Dependencias del proyecto
+??? setup.py                # Script de configuracion del proyecto
+```
+
+### Descripci�n de las carpetas y archivos:
+
+- **docs/**: Contiene la documentacion del proyecto, incluyendo descripciones generales, requisitos y manuales de usuario.
+- **src/**: Contiene el codigo fuente del proyecto. Aqui es donde se desarrollan los modulos y el archivo principal del programa.
+- **tests/**: Contiene las pruebas del proyecto, organizadas por modulos.
+- **data/**: Contiene los datos utilizados por el proyecto, organizados en datos sin procesar y procesados.
+- **scripts/**: Contiene scripts auxiliares que pueden ser utiles para tareas especificas del proyecto.
+- **.gitignore**: Archivo que especifica que archivos y carpetas deben ser ignorados por Git.
+- **requirements.txt**: Archivo que lista las dependencias del proyecto.
+- **setup.py**: Script de configuraci�n del proyecto, util para la instalacion y distribucion del paquete.
+
