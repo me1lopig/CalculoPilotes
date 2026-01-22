@@ -3,12 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="Cálculo de Rozamiento (Micropilotes)", layout="wide")
+st.set_page_config(page_title="Cálculo de Adherencia límite (Micropilotes)", layout="wide")
 
-st.title("🧮 Calculadora de Rozamiento límite por Fuste")
+st.title("🧮 Calculadora de Adherencia límite por Fuste para cálculo de Micropilotes")
 st.markdown("""
-Esta aplicación permite determinar el **rozamiento unitario límite** ($\\tau_{f,lim}$) 
-para el diseño de micropilotes y anclajes, respetando los rangos mínimos de aplicación de las gráficas.
+Esta aplicación permite determinar la **Adherencia límite** ($a_{lim}$) 
+para el diseño de micropilotes.
 """)
 
 # --- LÓGICA MATEMÁTICA ---
@@ -35,7 +35,7 @@ def calcular_arcillas(plim):
     return tau_iu, tau_ir, tau_irs
 
 # --- BARRA LATERAL (ENTRADAS) ---
-st.sidebar.header("⚙️ Configuración de Entrada")
+st.sidebar.header("⚙️ Datos de Entrada")
 
 tipo_suelo = st.sidebar.selectbox(
     "Selecciona el Tipo de Suelo:",
@@ -65,7 +65,7 @@ if tipo_suelo == "Arenas y Gravas":
     x_min_plot = 0.5 # Límite para gráfica Arenas
 
 else: # Arcillas y Limos
-    st.sidebar.info("⚠️ **Rango válido:**\n\n$P_{lim} \geq 0.25$ MPa\n($q_u \geq 0.05$ MPa)")
+    st.sidebar.info("⚠️ **Rango válido:**\n\n$P_{lim} \geq 0.25$ MPa \n ($q_u \geq 0.05$ MPa)")
     tipo_dato = st.sidebar.radio("Dato de entrada disponible:", ["Presión Límite (Plim)", "Compresión Simple (qu)"])
     
     if tipo_dato == "Presión Límite (Plim)":
@@ -98,9 +98,9 @@ with col1:
     st.markdown("---")
     
     # Formato condicional para resaltar el valor seleccionado
-    st.metric(label="IRS (Iny. Selectiva)", value=f"{res_irs:.3f} MPa")
-    st.metric(label="IR (Iny. Repetitiva)", value=f"{res_ir:.3f} MPa")
-    st.metric(label="IU (Iny. Única)", value=f"{res_iu:.3f} MPa")
+    st.metric(label="IRS", value=f"{res_irs:.3f} MPa")
+    st.metric(label="IR", value=f"{res_ir:.3f} MPa")
+    st.metric(label="IU", value=f"{res_iu:.3f} MPa")
     
     st.markdown("---")
     if tipo_suelo == "Arenas y Gravas":
@@ -109,14 +109,14 @@ with col1:
         st.caption("Nota: Para arcillas muy blandas ($q_u < 0.05$ MPa), la capacidad de fuste es despreciable o requiere un estudio especial.")
 
 with col2:
-    st.subheader("📈 Gráfico de Comprobación")
+    st.subheader("📈 Gráfico de Resultados")
     
     fig, ax1 = plt.subplots(figsize=(8, 5))
     
     if tipo_suelo == "Arenas y Gravas":
         x_max = 7.0
         title_graph = "Arenas y Gravas"
-        label_sec = "Índice SPT (N)"
+        label_sec = "SPT (N)"
         # Generar curvas
         x_vals = np.linspace(x_min_plot, x_max, 200)
         y_iu, y_ir, y_irs = calcular_arenas(x_vals)
@@ -135,11 +135,11 @@ with col2:
     ax1.plot(x_vals, y_iu, 'k--', label='IU', linewidth=2)
     
     # Línea del usuario
-    ax1.axvline(x=plim_calculo, color='red', linestyle=':', linewidth=2, label='Tu Dato')
+    ax1.axvline(x=plim_calculo, color='red', linestyle=':', linewidth=2, label='Dato de entrada')
     ax1.scatter([plim_calculo]*3, [res_iu, res_ir, res_irs], color='red', zorder=5)
     
     ax1.set_xlabel('Presión límite $P_{lim}$ (MPa)')
-    ax1.set_ylabel('Rozamiento unitario $\\tau_{f,lim}$ (MPa)')
+    ax1.set_ylabel('Adherencia límite $\\tau_{f,lim}$ (MPa)')
     ax1.set_title(f'Curvas de Diseño: {title_graph}')
     
     # AJUSTE DE LÍMITES EJE X (Dinámico según suelo)
