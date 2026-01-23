@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-# --- 1. LÓGICA MATEMÁTICA ---
+# Ajuste de la curvas para cada grupo
 
 def calcular_arenas(plim):
     tau_iu = np.minimum(0.114 * plim, 0.40)
@@ -17,7 +17,7 @@ def calcular_arcillas(plim):
     tau_iu = np.minimum(0.11 * np.power(plim, 0.7), 0.20)
     return tau_iu, tau_ir, tau_irs
 
-# --- 2. UTILIDADES ---
+# Encabezados
 
 def leer_numero(mensaje, min_val=None, max_val=None):
     while True:
@@ -38,7 +38,7 @@ def imprimir_encabezado():
     print("Calculadora de Adherencia límite en fuste para cálculo de Micropilotes")
     print("="*70 + "\n")
 
-# --- 3. GENERACIÓN DE GRÁFICA ---
+# Grafica 
 
 def mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_label, x_min_plot):
     print("\n📊 Generando gráfica")
@@ -61,12 +61,12 @@ def mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_lab
         x_vals = np.linspace(x_min_plot, x_max, 200)
         y_iu, y_ir, y_irs = calcular_arcillas(x_vals)
 
-    # --- EJE PRINCIPAL (Negro - Plim) ---
+    # Ejes
     ax1.plot(x_vals, y_irs, 'k-', label='IRS', linewidth=2)
     ax1.plot(x_vals, y_ir, 'k-.', label='IR', linewidth=2)
     ax1.plot(x_vals, y_iu, 'k--', label='IU ', linewidth=2)
     
-    # Dibujar punto del usuario
+    # Punto del dato de entrada
     ax1.axvline(x=plim_calculo, color='red', linestyle=':', linewidth=2, label='Dato')
     ax1.scatter([plim_calculo]*3, [res_iu, res_ir, res_irs], color='red', zorder=5)
     
@@ -76,7 +76,7 @@ def mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_lab
     ax1.text(plim_calculo + offset, res_ir, f' IR: {res_ir:.3f}', color='red', va='bottom')
     ax1.text(plim_calculo + offset, res_iu, f' IU: {res_iu:.3f}', color='red', va='top')
 
-    # Configuración Eje 1
+    # Eje 1
     ax1.set_xlabel(label_primary, fontsize=11, color='black')
     ax1.set_ylabel('Adherencia límite$\\tau_{f,lim}$ (MPa)', fontsize=11)
     ax1.set_title(f'Curvas: {title_graph}', fontsize=12, pad=15)
@@ -88,11 +88,11 @@ def mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_lab
     
     ax2 = ax1.twiny()
     
-    # Mover ticks y label abajo
+    # Espacio para los dos ejes 
     ax2.xaxis.set_ticks_position('bottom')
     ax2.xaxis.set_label_position('bottom')
     
-    # Desplazarlo 50 puntos hacia abajo (offset)
+    # Desplazarlo 50 puntos hacia abajo
     ax2.spines['bottom'].set_position(('outward', 50))
     
     # Sincronizar límites
@@ -103,7 +103,7 @@ def mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_lab
     ticks_plim = [t for t in ticks_plim if t >= x_min_plot and t <= x_max]
     ax2.set_xticks(ticks_plim)
     
-    # Etiquetas convertidas
+    # Etiquetas 
     if tipo_suelo == 1:
         labels_sec = [f"{int(t * 20)}" for t in ticks_plim]
     else:
@@ -111,13 +111,13 @@ def mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_lab
         
     ax2.set_xticklabels(labels_sec)
     
-    # APLICAR EL RÓTULO DEL SEGUNDO EJE
+    # Colocar el segundo eje
     ax2.set_xlabel(label_secondary, fontsize=11, color='blue', fontweight='bold')
     ax2.tick_params(axis='x', colors='blue')
     
     plt.show()
 
-# ---PROGRAMA PRINCIPAL ---
+# función principal
 
 def main():
     while True:
@@ -184,5 +184,5 @@ def main():
         mostrar_grafica(tipo_suelo, plim_calculo, res_iu, res_ir, res_irs, input_label, x_min_plot)
         input("\n[ENTER] para nuevo cálculo...")
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     main()
