@@ -31,7 +31,7 @@ def leer_numero(mensaje, min_val=None, max_val=None):
                 continue
             return valor
         except ValueError:
-            print("❌ Error: Por favor, introduce un número válido.")
+            print("❌ Error: Introduce un valor válido.")
 
 def imprimir_encabezado():
     print("\n" + "="*70)
