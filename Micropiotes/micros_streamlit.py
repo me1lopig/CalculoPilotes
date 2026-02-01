@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Cálculo de Adherencia límite (Micropilotes)", layout="wide")
 
@@ -9,6 +10,7 @@ st.title("🧮 Calculadora de Adherencia límite por Fuste")
 st.markdown("""
 Esta herramienta calcula la **Adherencia límite** ($r_{f,lim}$) utilizando **modelos lineales a trozos** ajustados a las gráficas de la normativa.
 """)
+st.markdown(""" Desarrollado para uso académico """)
 
 # --- FUNCIONES DE CÁLCULO (PIECEWISE LINEAR) ---
 
