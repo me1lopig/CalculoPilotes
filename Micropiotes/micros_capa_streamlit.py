@@ -29,7 +29,8 @@ st.set_page_config(page_title="Cálculo Geotécnico Micropilotes", layout="wide"
 
 st.title("🧮 Calculadora de valores de Adherencia Límite para  Micropilotes")
 st.markdown("Cálculo basado en la **Guía para el proyecto y ejecución de micropilotes en obras de carreteras**.")
-st.markdown("Desarrollado por la DT del Departamento de Geotecnia en colaboración con el I.T.Q")
+st.markdown("Desarrollado por la DT del Departamento de Geotecnia ")
+st.markdown("Version febrero de 2026")
 # --- CONSTANTES Y REGLAS DE CONTROL ---
 PARAM_ARENAS = ["Plim (MPa)", "SPT (N)"]
 PARAM_ARCILLAS = ["Plim (MPa)", "qu (MPa)"]
@@ -184,7 +185,7 @@ def generar_word(df_in, df_out, f1, f2):
 
 # Mostrar resultados finales
 if not df_res.empty:
-    st.subheader("📋 2. Resultados de cálculo de adherencia")
+    st.subheader("📋 2. Resultados de cálculo de adherencia límite")
     st.dataframe(df_res.drop(columns=["_p", "Grupo"]), use_container_width=True)
     
     fig1 = dibujar_grafico("Arenas y Gravas", df_res[df_res["Grupo"] == "Arenas y Gravas"])
