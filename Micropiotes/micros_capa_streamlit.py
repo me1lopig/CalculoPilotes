@@ -1,3 +1,20 @@
+
+# Programa para el cálculo de valores de Adherencia Límite para Micropilotes
+# Según la Guía para el proyecto y la ejecución de Micropilotes
+# en Obras de Carreteras
+# Dirección General de Carreteras
+# Ministerio de Fomento
+# Gobierno de España
+
+# Autor: Germán López Pineda
+# ICCP Universidad de Granada
+# MMC Universitat Jaume I
+# Fecha: 2024-11-19         
+# Versión: 1.0
+# Licencia: GPL-3.0
+# Contacto: me1lopig@uco.es
+
+
 import streamlit as st
 import numpy as np
 import pandas as pd
