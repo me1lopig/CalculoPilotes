@@ -1,21 +1,20 @@
-import argparse
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 def _safe_filename(txt):
     txt = str(txt)
-    # Conservador para Windows/Mac/Linux
     for bad in [" ", "/", "\\", ":", "*", "?", "\"", "<", ">", "|"]:
         txt = txt.replace(bad, "_")
     return txt
 
+def _script_dir():
+    return os.path.dirname(os.path.abspath(__file__))
 
 def plot_depth_vs_blows_png_groups(
-    excel_path,
-    out_dir="salidas_graficas",
+    excel_full_path,
+    out_dir_full_path,
     sheet_name=0,
     col_desc="Descripción Muestra",
     col_depth="Profundidad",
@@ -23,8 +22,15 @@ def plot_depth_vs_blows_png_groups(
     tick_step=10,
     curves_per_plot=10
 ):
-    df = pd.read_excel(excel_path, sheet_name=sheet_name)
+    df = pd.read_excel(excel_full_path, sheet_name=sheet_name)
     df.columns = [str(c).strip() for c in df.columns]
+
+    if col_desc not in df.columns:
+        raise KeyError("No existe la columna " + col_desc + " en el Excel. Columnas: " + str(list(df.columns)))
+    if col_depth not in df.columns:
+        raise KeyError("No existe la columna " + col_depth + " en el Excel. Columnas: " + str(list(df.columns)))
+    if col_blows not in df.columns:
+        raise KeyError("No existe la columna " + col_blows + " en el Excel. Columnas: " + str(list(df.columns)))
 
     df[col_depth] = pd.to_numeric(df[col_depth], errors="coerce")
     df[col_blows] = pd.to_numeric(df[col_blows], errors="coerce")
@@ -33,17 +39,26 @@ def plot_depth_vs_blows_png_groups(
     df_plot[col_desc] = df_plot[col_desc].astype(str)
     df_plot = df_plot.sort_values([col_desc, col_depth])
 
-    os.makedirs(out_dir, exist_ok=True)
+    if df_plot.shape[0] == 0:
+        raise ValueError("No hay filas válidas después de filtrar. Revisa NaNs y nombres de columnas.")
+
+    os.makedirs(out_dir_full_path, exist_ok=True)
 
     max_blows_val = float(np.nanmax(df_plot[col_blows].values))
+    if not np.isfinite(max_blows_val):
+        raise ValueError("No se pudo calcular el máximo de " + col_blows)
+
     max_tick = int(np.ceil(max_blows_val / float(tick_step)) * tick_step)
+    if max_tick <= 0:
+        max_tick = tick_step
+
     x_ticks = list(range(0, max_tick + 1, tick_step))
 
     unique_desc = sorted(df_plot[col_desc].unique())
     chunks = [unique_desc[i:i + curves_per_plot] for i in range(0, len(unique_desc), curves_per_plot)]
+    total_groups = len(chunks)
 
     saved_paths = []
-    total_groups = len(chunks)
 
     for group_idx, desc_chunk in enumerate(chunks, start=1):
         first_desc = desc_chunk[0]
@@ -51,7 +66,7 @@ def plot_depth_vs_blows_png_groups(
 
         title_txt = "Profundidad vs Número de Golpes - " + first_desc + " a " + last_desc
         file_stub = "profundidad_vs_golpes_" + _safe_filename(first_desc) + "_a_" + _safe_filename(last_desc)
-        out_path = os.path.join(out_dir, file_stub + ".png")
+        out_path = os.path.join(out_dir_full_path, file_stub + ".png")
 
         cmap = plt.get_cmap("tab10")
         color_map = {desc: cmap(i % 10) for i, desc in enumerate(desc_chunk)}
@@ -87,24 +102,24 @@ def plot_depth_vs_blows_png_groups(
 
     return saved_paths
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Genera PNGs por grupos (hasta 10 curvas por imagen) de Profundidad vs Número de Golpes."
-    )
-    parser.add_argument("excel_path", help="Ruta al archivo Excel (.xlsx)")
-    parser.add_argument("--out_dir", default="salidas_graficas", help="Carpeta de salida")
-    parser.add_argument("--sheet", default=0, help="Hoja (índice o nombre). Default 0")
-    parser.add_argument("--tick_step", type=int, default=10, help="Separación de ticks del eje X. Default 10")
-    parser.add_argument("--curves_per_plot", type=int, default=10, help="Curvas por imagen. Default 10")
-    args = parser.parse_args()
+    EXCEL_FILENAME = "DPRG.xlsx"
+
+    base_dir = _script_dir()
+    excel_path = os.path.join(base_dir, EXCEL_FILENAME)
+
+    if not os.path.exists(excel_path):
+        raise FileNotFoundError("No encontré el Excel en la misma carpeta del script: " + excel_path)
+
+    # Guardar las imágenes en el mismo directorio del script
+    out_dir = base_dir
 
     paths = plot_depth_vs_blows_png_groups(
-        args.excel_path,
-        out_dir=args.out_dir,
-        sheet_name=args.sheet,
-        tick_step=args.tick_step,
-        curves_per_plot=args.curves_per_plot
+        excel_full_path=excel_path,
+        out_dir_full_path=out_dir,
+        sheet_name=0,
+        tick_step=10,
+        curves_per_plot=10
     )
 
     for p in paths:
