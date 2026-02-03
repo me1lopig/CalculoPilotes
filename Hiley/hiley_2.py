@@ -1,25 +1,28 @@
 import pandas as pd
+import numpy as np
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-
-def generar_hiley_desde_dprg(
+def generar_hiley_valores_sin_formulas(
     ruta_dprg='DPRG.XLSX',
-    salida_xlsx='HILEY_generado_desde_DPRG.xlsx'
+    salida_xlsx='HILEY_generado_desde_DPRG_valores_sin_formulas.xlsx'
 ):
     # Leer DPRG
-    df_dprg_local = pd.read_excel(ruta_dprg, sheet_name=0)
+    df_dprg = pd.read_excel(ruta_dprg, sheet_name=0)
 
+    # Columnas esperadas en DPRG
     col_desc = 'Descripción Muestra'
     col_depth = 'Profundidad'
     col_blows = 'Número de Golpes'
 
-    df_base = df_dprg_local[[col_desc, col_depth, col_blows]].copy()
+    # Limpiar y preparar
+    df_base = df_dprg[[col_desc, col_depth, col_blows]].copy()
     df_base[col_depth] = pd.to_numeric(df_base[col_depth], errors='coerce')
     df_base[col_blows] = pd.to_numeric(df_base[col_blows], errors='coerce')
     df_base = df_base.dropna().sort_values([col_desc, col_depth]).reset_index(drop=True)
 
+    # Encabezados finales en el Excel
     headers = [
         'Z(m)',
         'N(20)',
@@ -32,11 +35,36 @@ def generar_hiley_desde_dprg(
         'Presión Admisible (kg/cm2)'
     ]
 
-    # Workbook
+    # Cálculo Hiley en Python (equivalente a las fórmulas extraídas de HILEY.xlsx)
+    def calcular_hiley(df_in):
+        z_vals = df_in[col_depth].astype(float).to_numpy()
+        n20_vals = df_in[col_blows].astype(float).to_numpy()
+
+        a_vals = z_vals / 10.0 + 0.25
+        e_vals = 20.0 / n20_vals
+        n_vals = 0.7 - 0.7 / 19.0 * (e_vals - 1.0)
+        c_vals = 0.5 - 0.5 / 19.0 * (e_vals - 1.0)
+
+        pres_car = 63.5 * 76.0 * (1.0 + (n_vals ** 2) * a_vals) / ((e_vals + c_vals) * (1.0 + a_vals) * 20.0)
+        pres_adm = pres_car / 50.0
+
+        df_out = pd.DataFrame({
+            headers[0]: z_vals,
+            headers[1]: n20_vals,
+            headers[2]: np.full_like(z_vals, 50.0, dtype=float),
+            headers[3]: a_vals,
+            headers[4]: e_vals,
+            headers[5]: n_vals,
+            headers[6]: c_vals,
+            headers[7]: pres_car,
+            headers[8]: pres_adm
+        })
+        return df_out
+
+    # Estilos (elegante, sin tabla ni filtros)
     wb_out = Workbook()
     wb_out.remove(wb_out.active)
 
-    # Estilos
     thin_side = Side(style='thin', color='B0B0B0')
     border_thin = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
@@ -52,13 +80,13 @@ def generar_hiley_desde_dprg(
     def formatear_hoja(ws, desc_name, n_rows):
         # Fila 1: título
         ws.merge_cells('A1:I1')
-        ws['A1'] = 'Cálculo Hiley - ' + str(desc_name)
+        ws['A1'] = 'Cálculo Hiley - ' + str(desc_name) + ' (valores fijos)'
         ws['A1'].font = font_title
         ws['A1'].fill = fill_title
         ws['A1'].alignment = align_left
         ws.row_dimensions[1].height = 26
 
-        # Fila 2: encabezados (sin filtros / sin tabla)
+        # Fila 2: encabezados (sin filtros)
         for j, h in enumerate(headers, start=1):
             cell = ws.cell(row=2, column=j, value=h)
             cell.font = font_header
@@ -67,7 +95,7 @@ def generar_hiley_desde_dprg(
             cell.border = border_thin
         ws.row_dimensions[2].height = 32
 
-        # Formato de datos
+        # Formatos de número y bordes
         start_row = 3
         end_row = start_row + n_rows - 1
 
@@ -80,9 +108,9 @@ def generar_hiley_desde_dprg(
                 if c == 1:
                     cell.number_format = '0.0'     # Z(m)
                 elif c in [2, 3]:
-                    cell.number_format = '0'       # N(20) y F
+                    cell.number_format = '0'       # N(20), F
                 elif c in [8, 9]:
-                    cell.number_format = '0.00'    # Últimas dos columnas a 2 decimales
+                    cell.number_format = '0.00'    # Presiones (2 decimales)
                 else:
                     cell.number_format = '0.0000'  # a, e, n, c
 
@@ -91,10 +119,10 @@ def generar_hiley_desde_dprg(
         for idx, w in enumerate(widths, start=1):
             ws.column_dimensions[get_column_letter(idx)].width = w
 
-        # Congelar encabezados
+        # Congelar encabezado
         ws.freeze_panes = 'A3'
 
-        # Impresión
+        # Configuración básica de impresión
         ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
         ws.page_setup.fitToWidth = 1
         ws.page_setup.fitToHeight = 0
@@ -102,52 +130,32 @@ def generar_hiley_desde_dprg(
 
     # Crear una hoja por cada Descripción Muestra
     for desc_val, df_grp in df_base.groupby(col_desc):
+        df_calc = calcular_hiley(df_grp)
+
         sheet_name = str(desc_val)
         if len(sheet_name) > 31:
             sheet_name = sheet_name[:31]
 
         base_name = sheet_name
-        idx_k = 1
+        k = 1
         while sheet_name in wb_out.sheetnames:
-            suffix = '_' + str(idx_k)
+            suffix = '_' + str(k)
             sheet_name = base_name[:31 - len(suffix)] + suffix
-            idx_k += 1
+            k += 1
 
         ws = wb_out.create_sheet(title=sheet_name)
 
-        # Escribir datos desde fila 3 y fórmulas estilo HILEY
-        for i in range(df_grp.shape[0]):
+        # Escribir datos calculados (VALORES, no fórmulas) desde fila 3
+        for i in range(df_calc.shape[0]):
             excel_r = 3 + i
+            for j, h in enumerate(headers, start=1):
+                ws.cell(row=excel_r, column=j, value=float(df_calc.iloc[i][h]))
 
-            z_val = float(df_grp.iloc[i][col_depth])
-            n20_val = float(df_grp.iloc[i][col_blows])
-
-            ws.cell(row=excel_r, column=1, value=z_val)   # A Z(m)
-            ws.cell(row=excel_r, column=2, value=n20_val) # B N(20)
-            ws.cell(row=excel_r, column=3, value=50)      # C F (constante 50)
-
-            # Fórmulas (equivalentes a HILEY.xlsx)
-            ws.cell(row=excel_r, column=4, value='=A' + str(excel_r) + '/10+0.25')  # a
-            ws.cell(row=excel_r, column=5, value='=20/B' + str(excel_r))           # e
-            ws.cell(row=excel_r, column=6, value='=0.7-0.7/19*(E' + str(excel_r) + '-1)')  # n
-            ws.cell(row=excel_r, column=7, value='=0.5-0.5/19*(E' + str(excel_r) + '-1)')  # c
-
-            # Presión característica
-            ws.cell(
-                row=excel_r,
-                column=8,
-                value='=63.5*76*(1+F' + str(excel_r) + '^2*D' + str(excel_r) + ')/((E' + str(excel_r) + '+G' + str(excel_r) + ')*(1+D' + str(excel_r) + ')*20)'
-            )
-
-            # Presión admisible
-            ws.cell(row=excel_r, column=9, value='=H' + str(excel_r) + '/C' + str(excel_r))
-
-        formatear_hoja(ws, desc_val, df_grp.shape[0])
+        formatear_hoja(ws, desc_val, df_calc.shape[0])
 
     wb_out.save(salida_xlsx)
     return salida_xlsx
 
-
 if __name__ == '__main__':
-    archivo_salida = generar_hiley_desde_dprg()
-    print(archivo_salida)
+    salida = generar_hiley_valores_sin_formulas()
+    print(salida)
