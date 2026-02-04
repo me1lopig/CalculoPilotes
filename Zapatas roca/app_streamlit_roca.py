@@ -63,7 +63,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏗️ Cálculo de Presión Vertical Admisible en Roca")
+st.title("🏗️ Cálculo de Presión Vertical Admisible en Roca según CTE DB SE C")
 
 # --- SECCIÓN A: INDICACIONES Y FORMULACIÓN ---
 st.markdown('<div class="titulo-seccion">INDICACIONES TÉCNICAS Y FORMULACIÓN</div>', unsafe_allow_html=True)
@@ -74,10 +74,10 @@ with col_req:
     st.markdown("""
     <div class="requisitos">
         <strong>Requisitos del Cálculo Analítico Simplificado:</strong><br>
-        • Para roca sana o poco meteorizada ($q_u > 2.5$ MPa, $RQD > 25$ y $GM < IV$).<br>
+        • Para roca sana o poco meteorizada (qu > 2.5 MPa, RQD > 25 y GM < IV).<br>
         • Superficie de la roca esencialmente horizontal y sin problemas de estabilidad lateral.<br>
         • Carga con componente tangencial inferior al 10% de la carga normal.<br>
-        • Estratos horizontales o subhorizontales en rocas sedimentarias.
+        • En rocas sedimentarias los estratos deben ser horizontales o subhorizontales.
     </div>
     """, unsafe_allow_html=True)
 
@@ -89,12 +89,11 @@ with col_form:
 
 st.divider()
 
-# --- SECCIÓN B: NORMAS CON ESTÉTICA PROFESIONAL ---
+# --- SECCIÓN B: TABLAS NORMATIVAS ---
 st.subheader("📚 Normas y Códigos de Uso Habitual")
 col_izq, col_der = st.columns(2)
 
 with col_izq:
-    # --- DIN 1054 ---
     st.markdown('<div class="titulo-norma">DIN 1054</div>', unsafe_allow_html=True)
     st.markdown("""
     <table class="tabla-profesional">
@@ -111,7 +110,6 @@ with col_izq:
     </table>
     """, unsafe_allow_html=True)
 
-    # --- CTE 2006 ---
     st.markdown('<div class="titulo-norma">CTE 2006 (España)</div>', unsafe_allow_html=True)
     st.markdown("""
     <table class="tabla-profesional">
@@ -123,13 +121,10 @@ with col_izq:
         <tr><td class="text-left grupo-roca">Rocas diaclasadas (s > 0.30m)</td><td>1.00</td></tr>
         <tr><td class="text-left grupo-roca">Rocas muy diaclasadas o meteorizadas</td><td>(ver nota 3)</td></tr>
     </table>
-    <div class="nota-pie-tabla">
-        (1) Estratificación subhorizontal. (2) s > 1m. (3) In situ. (4) Arcillosas sanas.
-    </div>
+    <div class="nota-pie-tabla">(1) Estrat. subhorizontal. (2) s > 1m. (3) In situ. (4) Arcillosas sanas.</div>
     """, unsafe_allow_html=True)
 
 with col_der:
-    # --- CP 2004 ---
     st.markdown('<div class="titulo-norma">CP 2004 / 1972</div>', unsafe_allow_html=True)
     st.markdown("""
     <table class="tabla-profesional">
@@ -147,13 +142,17 @@ with col_der:
 
 st.divider()
 
-# --- SECCIÓN C: PANEL DE CONTROL (SIDEBAR) ---
+# --- SECCIÓN C: SIDEBAR (CONTROLES) ---
 with st.sidebar:
     st.header("⚙️ Parámetros del Macizo")
     qu = st.number_input("Resistencia qu [MPa]", value=23.0, step=1.0)
     s = st.number_input("Espaciamiento s [mm]", value=200, step=10)
     a = st.number_input("Apertura a [mm]", value=3.0, step=0.1)
-    estado_junta = st.selectbox("Estado de juntas", ["Limpias", "Rellenas con suelo/fragmentos"])
+    
+    # Etiquetas exactas del Excel
+    opcion_limpia = "Limpias"
+    opcion_rellena = "Rellenas con suelo o con fragmentos de roca alterada"
+    estado_junta = st.selectbox("Estado de juntas", [opcion_limpia, opcion_rellena])
     
     st.divider()
     st.header("📏 Configuración de Anchos (B)")
@@ -161,27 +160,32 @@ with st.sidebar:
     b_max = st.number_input("Ancho Máximo B (m)", value=3.00, min_value=b_min, step=0.50)
     b_step = st.selectbox("Incremento de B (m)", [0.25, 0.50, 1.00], index=1)
 
-# Lógica de comprobaciones (Semáforos)
+# Lógica de comprobaciones (LÍMITES DINÁMICOS)
 c_s = s > 300
-c_a = (a < 5 if estado_junta == "Limpias" else a < 25)
+if estado_junta == opcion_limpia:
+    c_a = a < 5
+    label_a = "a < 5mm (Junta limpia)"
+else:
+    c_a = a < 25
+    label_a = "a < 25mm (Junta rellena/alterada)"
+
 rel_as = a/s
 c_rel = 0 < rel_as < 0.02
 
-st.subheader("✅ Comprobaciones")
+st.subheader("✅ Comprobaciones de Seguridad")
 v1, v2, v3 = st.columns(3)
-v1.metric("Espaciamiento s > 300mm", "CUMPLE" if c_s else "NO CUMPLE", delta_color="normal")
-v2.metric(f"Apertura a < {'5' if estado_junta == 'Limpias' else '25'}mm", "CUMPLE" if c_a else "NO CUMPLE")
-v3.metric(f"Relación a/s < 0.02 (Actual: {rel_as:.3f})", "CUMPLE" if c_rel else "NO CUMPLE")
+v1.metric("Espaciamiento s > 300mm", "CUMPLE" if c_s else "NO CUMPLE")
+v2.metric(label_a, "CUMPLE" if c_a else "NO CUMPLE")
+v3.metric(f"Relación a/s < 0.02 ({rel_as:.3f})", "CUMPLE" if c_rel else "NO CUMPLE")
 
 st.divider()
 
-# --- SECCIÓN D: RESULTADOS DINÁMICOS ---
+# --- SECCIÓN D: RESULTADOS ---
 def calc_ksp(s_val, B_val, a_val):
     return (3 + (s_val / (B_val * 1000))) / (10 * np.sqrt(1 + 300 * (a_val / s_val)))
 
 col_res_t, col_res_g = st.columns([0.45, 0.55], gap="large")
 
-# Generación de datos
 anchos_b = np.arange(b_min, b_max + 0.001, b_step)
 filas = []
 for b in anchos_b:
@@ -190,10 +194,10 @@ for b in anchos_b:
     valido = "SÍ" if 0.05 < (s / (b * 1000)) < 2 else "NO"
     filas.append({
         "B (m)": b,
-        "Válido 0,05<s/B<2": valido,
+        "Válido 0.05 < s/B < 2": valido,
         "Ksp": k,
         "qd (MPa)": qd,
-        "qd (kg/cm²)": qd * 1000/98.1
+        "qd (kg/cm²)": qd * 1000/98.1 # Tu conversión específica
     })
 df_res = pd.DataFrame(filas)
 
@@ -210,7 +214,6 @@ with col_res_t:
             "qd (kg/cm²)": st.column_config.NumberColumn(format="%.2f"),
         }
     )
-    # Descarga
     csv = df_res.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Descargar Resultados (CSV)", data=csv, file_name="calculo_roca.csv", mime="text/csv")
 
@@ -223,6 +226,7 @@ with col_res_g:
         x=b_smooth, y=qd_smooth,
         mode='lines',
         line=dict(color='#1b5e20', width=4),
+        name='qd (MPa)',
         hovertemplate='B: %{x:.2f}m<br>qd: %{y:.2f} MPa<extra></extra>'
     ))
     
