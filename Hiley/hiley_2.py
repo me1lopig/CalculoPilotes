@@ -4,9 +4,9 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-def generar_hiley_valores_sin_formulas(
+def generar_hiley(
     ruta_dprg='DPRG.XLSX',
-    salida_xlsx='HILEY_generado_desde_DPRG_valores_sin_formulas.xlsx'
+    salida_xlsx='HILEY.xlsx'
 ):
     # Leer DPRG
     df_dprg = pd.read_excel(ruta_dprg, sheet_name=0)
@@ -157,5 +157,5 @@ def generar_hiley_valores_sin_formulas(
     return salida_xlsx
 
 if __name__ == '__main__':
-    salida = generar_hiley_valores_sin_formulas()
+    salida = generar_hiley()
     print(salida)
