@@ -60,15 +60,25 @@ with col_izq:
         <tr><td class="text-left grupo-roca">Estratificado o diaclasado</td><td>2.00</td><td>1.00</td></tr>
     </table>""", unsafe_allow_html=True)
 
+# --- TABLA CTE 2006 (España) ---
     st.markdown('<div class="titulo-norma">CTE 2006 (España)</div>', unsafe_allow_html=True)
-    st.markdown("""<table class="tabla-profesional">
+    st.markdown("""
+    <table class="tabla-profesional">
         <tr><th>Tipo de roca</th><th>q<sub>adm</sub> (MPa)</th></tr>
         <tr><td class="text-left grupo-roca">Rocas ígneas y metamórficas sanas (1)</td><td>10.00</td></tr>
         <tr><td class="text-left grupo-roca">Rocas metamórficas foliadas sanas (1) (2)</td><td>3.00</td></tr>
         <tr><td class="text-left grupo-roca">Rocas sedimentarias sanas (1) (2)</td><td>1.00 - 4.00</td></tr>
         <tr><td class="text-left grupo-roca">Rocas arcillosas sanas (2) (4)</td><td>0.50 - 1.00</td></tr>
         <tr><td class="text-left grupo-roca">Rocas diaclasadas (s > 0.30m)</td><td>1.00</td></tr>
-    </table>""", unsafe_allow_html=True)
+        <tr><td class="text-left grupo-roca">Rocas muy diaclasadas o meteorizadas</td><td>(ver nota 3)</td></tr>
+    </table>
+    <div class="nota-pie-tabla">
+        (1) Los valores indicados serán aplicables para estratificación y/o foliación subhorizontal. Los macizos rocosos con discontinuidades inclinadas, especialmente en las cercanías de taludes, deben ser objeto de análisis especial.<br>
+        (2) Se admiten pequeñas discontinuidades con espaciamiento superior a 1m.<br>
+        (3) Estos casos deben ser investigados "in situ".<br>
+        (4) Rocas arcillosas sanas.
+    </div>
+    """, unsafe_allow_html=True)
 
 with col_der:
     st.markdown('<div class="titulo-norma">CP 2004 / 1972</div>', unsafe_allow_html=True)
@@ -90,7 +100,7 @@ with st.sidebar:
     
     # NUEVO CONTROL qu
     if qu_input < 2.5:
-        st.warning(f"⚠️ Resistencia qu ({qu_input} MPa) inferior al límite de 2.5 MPa.")
+        st.warning(f"⚠️ Resistencia qu ({qu_input} MPa) inferior al límite de 2.5 MPa valor mínimo de cálculo")
         qu_calc = 2.5
     else:
         qu_calc = qu_input
