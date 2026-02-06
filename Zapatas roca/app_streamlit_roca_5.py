@@ -8,9 +8,16 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Cimentaciones superficiales en Roca", layout="wide")
 
+# --- FUNCIÓN PARA RESETEAR INFORME (NUEVO) ---
+# Esta función se ejecutará cada vez que cambie un input
+def reset_informe():
+    if 'informe_buffer' in st.session_state:
+        st.session_state.informe_buffer = None
+
+# Estilos CSS
 st.markdown("""
     <style>
     .main { background-color: #fcfcfc; }
@@ -28,55 +35,46 @@ st.markdown("""
 
 st.title("🏗️ Cálculo de Presión Vertical Admisible en Roca")
 
-# --- FUNCIÓN GENERADORA DE INFORME WORD ---
-def generar_word(qu_inp, s_val, a_val, estado_j, b_range_info, checks, df_data, fig_plot):
+# --- CONSTANTES ---
+OP_LIMPIA = "Limpias"
+OP_RELLENA = "Rellenas con suelo"
+
+# --- FUNCIÓN GENERADORA DE informe WORD ---
+def generar_informe_word(qu_inp, s_val, a_val, estado_j, b_range_info, checks, df_data, fig_plot):
     doc = Document()
-    
-    # Configuración de fuente base
     style = doc.styles['Normal']
     style.font.name = 'Calibri'
     style.font.size = Pt(11)
     
-    # --- ESTILO UNIFICADO PARA TABLAS ---
-    estilo_tablas = 'Light List Accent 1'
-
     # 1. ENCABEZADO
-    titulo = doc.add_heading('Informe Técnico: Cimentaciones en Roca', 0)
+    titulo = doc.add_heading('Informe resultados: Cimentaciones en Roca', 0)
     titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     p_meta = doc.add_paragraph()
     p_meta.add_run(f"Fecha de emisión: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n").bold = True
-    p_meta.add_run("Metodología: Cálculo Analítico Simplificado (CTE)")
+    p_meta.add_run("Metodología: Cálculo Analítico Simplificado (CTE-DB-SE-C 2019)")
 
-    # 2. PARÁMETROS DE DISEÑO
+    # 2. PARÁMETROS
     doc.add_heading('1. Parámetros de Diseño', level=1)
-    
     p_params = doc.add_paragraph()
-    p_params.add_run(f"• Resistencia Compresión Simple (qu): ").bold = True
-    p_params.add_run(f"{qu_inp} MPa\n")
-    p_params.add_run(f"• Espaciamiento de juntas (s): ").bold = True
-    p_params.add_run(f"{s_val} mm\n")
-    p_params.add_run(f"• Apertura de juntas (a): ").bold = True
-    p_params.add_run(f"{a_val} mm\n")
-    p_params.add_run(f"• Estado de juntas: ").bold = True
-    p_params.add_run(f"{estado_j}\n")
-    p_params.add_run(f"• Rango de Anchos (B): ").bold = True
-    p_params.add_run(f"{b_range_info[0]:.2f} m - {b_range_info[1]:.2f} m (Inc: {b_range_info[2]} m)")
+    p_params.add_run(f"• Resistencia (qu): {qu_inp} MPa\n")
+    p_params.add_run(f"• Espaciamiento (s): {s_val} mm\n")
+    p_params.add_run(f"• Apertura (a): {a_val} mm\n")
+    p_params.add_run(f"• Estado juntas: {estado_j}\n")
+    p_params.add_run(f"• Anchos (B): {b_range_info[0]:.2f}m - {b_range_info[1]:.2f}m")
 
-    # 3. VERIFICACIÓN DE HIPÓTESIS (TABLA 1)
+    # 3. VERIFICACIÓN (TABLA)
     doc.add_heading('2. Verificación de Hipótesis', level=1)
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Light List Accent 1'
     
-    table_checks = doc.add_table(rows=1, cols=2)
-    table_checks.style = estilo_tablas
-    
-    hdr_cells = table_checks.rows[0].cells
+    hdr_cells = table.rows[0].cells
     hdr_cells[0].text = 'Parámetro de Control'
     hdr_cells[1].text = 'Estado'
     
     for check_name, status in checks.items():
-        row_cells = table_checks.add_row().cells
+        row_cells = table.add_row().cells
         row_cells[0].text = check_name
-        
         p = row_cells[1].paragraphs[0]
         run = p.add_run(status)
         if "NO CUMPLE" in status:
@@ -87,11 +85,10 @@ def generar_word(qu_inp, s_val, a_val, estado_j, b_range_info, checks, df_data, 
 
     doc.add_paragraph()
 
-    # 4. RESULTADOS (TABLA 2)
+    # 4. RESULTADOS
     doc.add_heading('3. Tabla de Resultados', level=1)
-    
     t_res = doc.add_table(df_data.shape[0] + 1, df_data.shape[1])
-    t_res.style = estilo_tablas
+    t_res.style = 'Light List Accent 1'
     
     for j in range(df_data.shape[-1]):
         t_res.cell(0, j).text = df_data.columns[j]
@@ -104,25 +101,20 @@ def generar_word(qu_inp, s_val, a_val, estado_j, b_range_info, checks, df_data, 
             else:
                 t_res.cell(i + 1, j).text = str(val)
 
-    # 5. GRÁFICA (MEJORADA)
-    doc.add_heading('4. Gráfica de Presión Admisible', level=1)
-    
+    # 5. GRÁFICA
+    doc.add_heading('4. Gráfica de Resultados', level=1)
     try:
-        # MEJORA: Aumentar resolución (scale=3) y tamaño de la imagen en píxeles
         img_bytes = fig_plot.to_image(format="png", width=1000, height=600, scale=3)
-        # MEJORA: Ajustar el ancho de la imagen en Word
         doc.add_picture(io.BytesIO(img_bytes), width=Inches(6.5))
     except Exception as e:
-        doc.add_paragraph(f"[No se pudo generar la imagen del gráfico. Error: {e}]")
-        doc.add_paragraph("Nota: Asegúrese de tener instalado el paquete 'kaleido'.")
+        doc.add_paragraph(f"[No se pudo generar el gráfico: {e}]")
 
     bio = io.BytesIO()
     doc.save(bio)
     return bio
 
-# --- SECCIÓN A: INDICACIONES Y FORMULACIÓN ---
+# --- SECCIÓN A: INFO ---
 st.markdown('<div class="titulo-seccion">INDICACIONES TÉCNICAS Y FORMULACIÓN</div>', unsafe_allow_html=True)
-
 col_req, col_form = st.columns([0.6, 0.4])
 
 with col_req:
@@ -144,12 +136,11 @@ with col_form:
 
 st.divider()
 
-# --- SECCIÓN B: NORMAS  ---
-st.subheader("📚 Normas y Códigos de Uso Habitual")
+# --- SECCIÓN B: NORMAS ---
+st.subheader("📚 Normas y Códigos de referencia")
 col_izq, col_der = st.columns(2)
 
 with col_izq:
-    # DIN 1054
     st.markdown('<div class="titulo-norma">DIN 1054</div>', unsafe_allow_html=True)
     st.markdown("""<table class="tabla-profesional">
         <tr><th rowspan="2">Estado del macizo</th><th colspan="2">Presión Admisible (MPa)</th></tr>
@@ -158,28 +149,8 @@ with col_izq:
         <tr><td class="text-left grupo-roca">Estratificado o diaclasado</td><td>2.00</td><td>1.00</td></tr>
     </table>""", unsafe_allow_html=True)
 
-    # CTE 2006
-    st.markdown('<div class="titulo-norma">CTE 2006 (España)</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <table class="tabla-profesional">
-        <tr><th>Tipo de roca</th><th>q<sub>adm</sub> (MPa)</th></tr>
-        <tr><td class="text-left grupo-roca">Rocas ígneas y metamórficas sanas (1)</td><td>10.00</td></tr>
-        <tr><td class="text-left grupo-roca">Rocas metamórficas foliadas sanas (1) (2)</td><td>3.00</td></tr>
-        <tr><td class="text-left grupo-roca">Rocas sedimentarias sanas (1) (2)</td><td>1.00 - 4.00</td></tr>
-        <tr><td class="text-left grupo-roca">Rocas arcillosas sanas (2) (4)</td><td>0.50 - 1.00</td></tr>
-        <tr><td class="text-left grupo-roca">Rocas diaclasadas (s > 0.30m)</td><td>1.00</td></tr>
-        <tr><td class="text-left grupo-roca">Rocas muy diaclasadas o meteorizadas</td><td>(ver nota 3)</td></tr>
-    </table>
-    <div class="nota-pie-tabla">
-        (1) Los valores indicados serán aplicables para estratificación y/o foliación subhorizontal. Los macizos rocosos con discontinuidades inclinadas, especialmente en las cercanías de taludes, deben ser objeto de análisis especial.<br>
-        (2) Se admiten pequeñas discontinuidades con espaciamiento superior a 1m.<br>
-        (3) Estos casos deben ser investigados "in situ".<br>
-        (4) Rocas arcillosas sanas.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-with col_der:
-    # CP 2004
     st.markdown('<div class="titulo-norma">CP 2004 / 1972</div>', unsafe_allow_html=True)
     st.markdown("""<table class="tabla-profesional">
         <tr><th>Tipo de roca</th><th>q<sub>adm</sub> (MPa)</th></tr>
@@ -188,58 +159,92 @@ with col_der:
         <tr><td class="text-left grupo-roca">Esquistos y pizarras</td><td>3.00</td></tr>
         <tr><td class="text-left grupo-roca">Argilitas/limolitas duras, areniscas blandas</td><td>2.00</td></tr>
         <tr><td class="text-left grupo-roca">Arenas cementadas</td><td>1.00</td></tr>
+        <tr><td class="text-left grupo-roca">Argilitas y limolitas blandas</td><td>0.60 - 1.00</td></tr>
+        <tr><td class="text-left grupo-roca">Calizas blandas y porosas</td><td>0.60</td></tr>
     </table>""", unsafe_allow_html=True)
+
+with col_der:
+    st.markdown('<div class="titulo-norma">CTE 2019 (España)</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <table class="tabla-profesional">
+        <tr><th>Tipo de roca</th><th>q<sub>adm</sub> (MPa)</th></tr>
+        <tr><td class="text-left grupo-roca">Rocas ígneas y metamórficas sanas (1):<br><span style="font-size:11px; color:#555">Granito, diorita, basalto, gneis</span></td><td>10.00</td></tr>
+        <tr><td class="text-left grupo-roca">Rocas metamórficas foliadas sanas (1) (2):<br><span style="font-size:11px; color:#555">Esquistos, pizarras</span></td><td>3.00</td></tr>
+        <tr><td class="text-left grupo-roca">Rocas sedimentarias sanas (1) (2):<br><span style="font-size:11px; color:#555">Pizarras cementadas, limolitas, areniscas, calizas sin karstificar, conglomerados cementados</span></td><td>1.00 - 4.00</td></tr>
+        <tr><td class="text-left grupo-roca">Rocas arcillosas sanas (2) (4)</td><td>0.50 - 1.00</td></tr>
+        <tr><td class="text-left grupo-roca">Rocas diaclasadas de cualquier tipo con espaciamiento > 0.30m (excepto rocas arcillosas)</td><td>1.00</td></tr>
+        <tr><td class="text-left grupo-roca">Calizas, areniscas y rocas pizarrosas con pequeño espaciamiento de estratificación</td><td>(ver 3)</td></tr>
+        <tr><td class="text-left grupo-roca">Rocas muy diaclasadas o meteorizadas</td><td>(ver 3)</td></tr>
+    </table>
+    <div class="nota-pie-tabla">
+        (1) Aplicable para estratificación subhorizontal.<br>
+        (2) Discontinuidades peq. con s > 1m.<br>
+        (3) Investigar "in situ". (4) Rocas arcillosas sanas.
+    </div>
+    """, unsafe_allow_html=True)
 
 st.divider()
 
-# --- SECCIÓN C: SIDEBAR Y LÓGICA ---
+# --- SECCIÓN C: SIDEBAR (CON RESETEO AUTOMÁTICO) ---
 with st.sidebar:
     st.header("⚙️ Parámetros del Macizo")
-    qu_input = st.number_input("Resistencia qu [MPa]", value=15.0, step=0.5)
+    
+    # AÑADIMOS on_change=reset_informe A TODOS LOS INPUTS
+    qu_input = st.number_input("Resistencia qu [MPa]", value=15.0, step=0.5, on_change=reset_informe)
     
     if qu_input < 2.5:
-        st.warning(f"⚠️ Resistencia qu ({qu_input} MPa) inferior al límite. Cálculo no váñido.")
+        st.warning(f"⚠️ Resistencia qu ({qu_input}) MPa baja. Cálculo fuera de modelo, valor mínimo 2.5 MPa.")
         qu_calc = 2.5
     else:
         qu_calc = qu_input
 
-    s = st.number_input("Espaciamiento s [mm]", value=301, step=10)
-    a = st.number_input("Apertura a [mm]", value=3.0, step=0.1)
+    s = st.number_input("Espaciamiento s [mm]", value=301, step=10, min_value=1, on_change=reset_informe)
+    a = st.number_input("Apertura a [mm]", value=3.0, step=0.1, on_change=reset_informe)
     
-    op_limpia = "Limpias"
-    op_rellena = "Rellenas con suelo"
-    estado_junta = st.selectbox("Estado de juntas", [op_limpia, op_rellena])
+    estado_junta = st.selectbox("Estado de juntas", [OP_LIMPIA, OP_RELLENA], on_change=reset_informe)
     
     st.divider()
     st.header("📏 Rango de Anchos (B)")
-    b_min = st.number_input("Ancho Mínimo B (m)", value=1.0, min_value=0.10, step=0.10)
-    b_max = st.number_input("Ancho Máximo B (m)", value=3.00, min_value=b_min, step=0.50)
-    b_step = st.selectbox("Incremento de B (m)", [0.25, 0.50, 1.00], index=1)
+    b_min = st.number_input("Ancho Mínimo B (m)", value=1.0, min_value=0.10, step=0.10, on_change=reset_informe)
+    b_max = st.number_input("Ancho Máximo B (m)", value=3.00, min_value=b_min, step=0.50, on_change=reset_informe)
+    b_step = st.selectbox("Incremento de B (m)", [0.25, 0.50, 1.00], index=1, on_change=reset_informe)
 
-# Comprobaciones
+# --- LÓGICA DE COMPROBACIÓN ---
 c_s = s > 300
-c_a = a < 5 if estado_junta == op_limpia else a < 25
-rel_as = a/s
-c_rel = 0 < rel_as < 0.02
 c_qu = qu_input >= 2.5
+c_rel = 0 < (a/s) < 0.02
+
+if estado_junta == OP_LIMPIA:
+    limite_a = 5
+    texto_apertura = "Apertura a < 5 mm (Junta Limpia)"
+else:
+    limite_a = 25
+    texto_apertura = "Apertura a < 25 mm (Junta Rellena)"
+
+c_a = a < limite_a
 
 checks_dict = {
     "Resistencia qu ≥ 2.5 MPa": "CUMPLE" if c_qu else "NO CUMPLE",
     "Espaciamiento s > 300mm": "CUMPLE" if c_s else "NO CUMPLE",
-    f"Apertura a < {'5' if estado_junta == op_limpia else '25'}mm": "CUMPLE" if c_a else "NO CUMPLE",
+    texto_apertura: "CUMPLE" if c_a else "NO CUMPLE",
     "Relación a/s < 0.02": "CUMPLE" if c_rel else "NO CUMPLE"
 }
 
+# --- VISUALIZACIÓN: TABLA SIN ÍNDICE ---
 st.subheader("✅ Comprobaciones de Seguridad")
-v1, v2, v3, v4 = st.columns(4)
-v1.metric("qu ≥ 2.5 MPa", checks_dict["Resistencia qu ≥ 2.5 MPa"])
-v2.metric("s > 300mm", checks_dict["Espaciamiento s > 300mm"])
-v3.metric("Apertura (a)", checks_dict[f"Apertura a < {'5' if estado_junta == op_limpia else '25'}mm"])
-v4.metric("Relación a/s", checks_dict["Relación a/s < 0.02"])
+
+df_checks = pd.DataFrame(list(checks_dict.items()), columns=["Parámetro de Control", "Estado"])
+df_checks.set_index("Parámetro de Control", inplace=True)
+
+def estilo_estado(val):
+    color = '#2e7d32' if "CUMPLE" in val and "NO" not in val else '#c62828'
+    return f'color: {color}; font-weight: bold'
+
+st.table(df_checks.style.applymap(estilo_estado, subset=['Estado']))
 
 st.divider()
 
-# --- SECCIÓN D: CÁLCULOS Y RESULTADOS ---
+# --- SECCIÓN D: CÁLCULOS Y GRÁFICO ---
 def calc_ksp(s_val, B_val, a_val):
     return (3 + (s_val / (B_val * 1000))) / (10 * np.sqrt(1 + 300 * (a_val / s_val)))
 
@@ -260,65 +265,56 @@ for b in anchos_b:
 
 df_res = pd.DataFrame(filas)
 
-# Generación Gráfica (MEJORADA)
+# Gráfico
 b_smooth = np.linspace(b_min, b_max, 100)
 qd_smooth = [qu_calc * calc_ksp(s, b, a) for b in b_smooth]
 
 fig = go.Figure(go.Scatter(x=b_smooth, y=qd_smooth, mode='lines', line=dict(color='#1b5e20', width=4)))
 fig.update_layout(
     title="Curva de Presión Admisible",
-    xaxis_title="Ancho de Cimentación B (m)",
-    yaxis_title="Presión Admisible qd (MPa)",
-    plot_bgcolor='white',
-    height=500, # MEJORA: Altura aumentada
-    # MEJORA: Márgenes aumentados para evitar cortes
-    margin=dict(l=50, r=50, t=60, b=50)
+    xaxis_title="Ancho B (m)", yaxis_title="qd (MPa)",
+    plot_bgcolor='white', height=500, margin=dict(l=50, r=50, t=60, b=50)
 )
 fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee')
 fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee')
 
-col_res_t, col_res_g = st.columns([0.45, 0.55], gap="large")
-
-with col_res_t:
-    st.subheader("📋 Resultados Cálculo Analítico")
+col_t, col_g = st.columns([0.45, 0.55], gap="large")
+with col_t:
+    st.subheader("📋 Resultados Tabulados")
     st.dataframe(df_res, hide_index=True, use_container_width=True,
                  column_config={"B (m)": st.column_config.NumberColumn(format="%.2f"),
                                 "Ksp": st.column_config.NumberColumn(format="%.3f"),
                                 "qd (MPa)": st.column_config.NumberColumn(format="%.2f"),
                                 "qd (kg/cm²)": st.column_config.NumberColumn(format="%.2f")})
-
-with col_res_g:
+with col_g:
     st.subheader("📈 Gráfico de Diseño")
     st.plotly_chart(fig, use_container_width=True)
 
-# --- BOTÓN DE DESCARGA (SIDEBAR) ---
+# --- GESTIÓN DE ESTADO Y DESCARGA (LÓGICA ACTUALIZADA) ---
+if 'informe_buffer' not in st.session_state:
+    st.session_state.informe_buffer = None
+
 with st.sidebar:
     st.divider()
     st.header("📄 Informe Técnico")
     
+    # 1. Generar
     if st.button("Generar informe Word"):
-        with st.spinner("Generando documento..."):
+        with st.spinner("Generando informe..."):
             try:
-                doc_buffer = generar_word(
-                    qu_inp=qu_calc,
-                    s_val=s,
-                    a_val=a,
-                    estado_j=estado_junta,
-                    b_range_info=[b_min, b_max, b_step],
-                    checks=checks_dict,
-                    df_data=df_res,
-                    fig_plot=fig
-                )
-                
-                file_name = f"Calculo_Roca_{datetime.now().strftime('%Y%m%d')}.docx"
-                
-                st.success("✅ Informe generado correctamente")
-                st.download_button(
-                    label="📥 Descargar .docx",
-                    data=doc_buffer.getvalue(),
-                    file_name=file_name,
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+                buffer = generar_informe_word(qu_calc, s, a, estado_junta, [b_min, b_max, b_step],
+                                            checks_dict, df_res, fig)
+                st.session_state.informe_buffer = buffer
+                st.session_state.informe_nombre = f"informe_Roca_{datetime.now().strftime('%H%M')}.docx"
+                st.success("¡informe generado!")
             except Exception as e:
-                st.error(f"Error: {e}")
-                st.warning("Verifique que 'kaleido' esté instalado para exportar el gráfico.")
+                st.error(f"Error generando informe: {e}")
+
+    # 2. Descargar (Solo visible si el buffer existe)
+    if st.session_state.informe_buffer is not None:
+        st.download_button(
+            label="📥 Descargar Documento",
+            data=st.session_state.informe_buffer.getvalue(),
+            file_name=st.session_state.informe_nombre,
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
