@@ -1,3 +1,8 @@
+# Aplicacion para el cálculo de la carga admisible en roca
+# Basada en el método analítico simplificado (CTE-DB-SE-C 2019)
+# Desarrollado por: Germán López Pineda
+# Fecha: febrero 2026
+
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -11,7 +16,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Cimentaciones superficiales en Roca", layout="wide")
 
-# --- FUNCIÓN PARA RESETEAR INFORME (NUEVO) ---
+# --- FUNCIÓN PARA RESETEAR INFORME ---
 # Esta función se ejecutará cada vez que cambie un input
 def reset_informe():
     if 'informe_buffer' in st.session_state:
@@ -34,6 +39,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🏗️ Cálculo de Presión Vertical Admisible en Roca")
+st.markdown("Según CTE-DB-SE-C 2019 ", unsafe_allow_html=True)
 
 # --- CONSTANTES ---
 OP_LIMPIA = "Limpias"
@@ -64,7 +70,7 @@ def generar_informe_word(qu_inp, s_val, a_val, estado_j, b_range_info, checks, d
     p_params.add_run(f"• Anchos (B): {b_range_info[0]:.2f}m - {b_range_info[1]:.2f}m")
 
     # 3. VERIFICACIÓN (TABLA)
-    doc.add_heading('2. Verificación de Hipótesis', level=1)
+    doc.add_heading('2. Verificación de Hipótesis del Modelo', level=1)
     table = doc.add_table(rows=1, cols=2)
     table.style = 'Light List Accent 1'
     
@@ -129,7 +135,7 @@ with col_req:
     """, unsafe_allow_html=True)
 
 with col_form:
-    st.markdown("**Formulación Matemática:**")
+    st.markdown("**Formulación usada:**")
     st.latex(r"K_{sp} = \frac{3 + \frac{s}{1000 \cdot B}}{10 \sqrt{1 + 300 \frac{a}{s}}}")
     st.latex(r"q_d = q_u \cdot K_{sp}")
     st.caption("Donde: $s$ y $a$ en mm, $B$ en m.")
@@ -231,7 +237,7 @@ checks_dict = {
 }
 
 # --- VISUALIZACIÓN: TABLA SIN ÍNDICE ---
-st.subheader("✅ Comprobaciones de Seguridad")
+st.subheader("✅ Verificación de las Hipótesis del Modelo")
 
 df_checks = pd.DataFrame(list(checks_dict.items()), columns=["Parámetro de Control", "Estado"])
 df_checks.set_index("Parámetro de Control", inplace=True)
