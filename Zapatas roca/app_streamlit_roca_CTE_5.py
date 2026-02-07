@@ -38,8 +38,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏗️ Cálculo de Presión Vertical Admisible en Roca")
-st.markdown("Según CTE-DB-SE-C 2019 ", unsafe_allow_html=True)
+st.title("🏗️ Cálculo de Presión Vertical Admisible en Roca CTE-DB-SE-C")
 
 # --- CONSTANTES ---
 OP_LIMPIA = "Limpias"

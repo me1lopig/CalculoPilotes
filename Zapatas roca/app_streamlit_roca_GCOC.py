@@ -137,7 +137,7 @@ with col_req:
     """, unsafe_allow_html=True)
 
 with col_form:
-    st.markdown("**Formulación Matemática:**")
+    st.markdown("**Formulación usada:**")
     st.latex(r"p_{v,adm} = p_0 \cdot \alpha_1 \cdot \alpha_2 \cdot \alpha_3 \cdot \frac{q_u}{p_0}")
     st.caption("Donde: $p_0 = 1$ MPa. Resultado constante independiente de B.")
 
