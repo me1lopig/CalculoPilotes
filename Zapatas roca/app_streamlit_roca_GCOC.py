@@ -183,7 +183,7 @@ with st.sidebar:
     s_input = st.number_input("Espaciamiento s [m]", value=0.30, step=0.05, min_value=0.01, format="%.2f", on_change=reset_informe)
 
     st.divider()
-    st.subheader("🪨 Factores de Calidad (α)")
+    st.subheader("⛰️ Factores de Calidad (α)")
 
     # 4. Selector Alfa 1
     opciones_a1 = {
