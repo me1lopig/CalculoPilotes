@@ -114,7 +114,7 @@ def generar_informe_word(inputs, resultados, checks):
                         run.bold = True
                         run.font.size = Pt(12)
 
-    # Nota sobre límite
+    # Nota sobre límite de 5 MPa
     if resultados['q_adm'] == 5.0 and inputs['qu'] > 5.0:
         doc.add_paragraph("\nNota: El valor ha sido limitado a 5 MPa según especificación de la Guía.", style='Intense Quote')
 
@@ -143,7 +143,7 @@ with col_form:
 
 st.divider()
 
-# --- SECCIÓN B: TABLAS NORMATIVAS ---
+# --- SECCIÓN B: TABLAS PARA OBTENER COEFICIENTES  ---
 st.subheader("📚 Tablas de Coeficientes")
 col_izq, col_der = st.columns(2)
 
