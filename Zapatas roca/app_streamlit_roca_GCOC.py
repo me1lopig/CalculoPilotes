@@ -8,12 +8,12 @@ from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # 1. CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="Guía Cimentaciones Carretera - Roca", layout="centered")
+st.set_page_config(page_title="Carga Admisible en Roca - GCOC 2009", layout="centered")
 
 # --- FUNCIÓN PARA RESETEAR INFORME ---
-def reset_reporte():
-    if 'reporte_buffer' in st.session_state:
-        st.session_state.reporte_buffer = None
+def reset_informe():
+    if 'informe_buffer' in st.session_state:
+        st.session_state.informe_buffer = None
 
 # Estilos CSS
 st.markdown("""
@@ -30,10 +30,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🛣️ Cimentaciones en Obras de Carretera (Guía Fomento)")
+st.title("🛣️ Cálculo de Presión Vertical Admisible en Roca (GCOC 2009)")
 
-# --- FUNCIÓN GENERADORA DE REPORTE WORD ---
-def generar_reporte_word(inputs, resultados, checks):
+# --- FUNCIÓN GENERADORA DE informe WORD ---
+def generar_informe_word(inputs, resultados, checks):
     doc = Document()
     style = doc.styles['Normal']
     style.font.name = 'Calibri'
@@ -52,12 +52,12 @@ def generar_reporte_word(inputs, resultados, checks):
     p = doc.add_paragraph()
     p.add_run(f"• Resistencia Compresión Simple (qu): {inputs['qu']} MPa\n")
     p.add_run(f"• RQD: {inputs['rqd']} %\n")
-    p.add_run(f"• Espaciamiento discontinuidades (s): {inputs['s']} m\n")
+    p.add_run(f"• Espaciamiento discontinuidades (s): {inputs['s']:.2f} m\n")
     p.add_run(f"• Tipo de Roca: {inputs['txt_a1']}\n")
     p.add_run(f"• Grado Meteorización: {inputs['txt_a2']}")
 
     # 3. VERIFICACIÓN (TABLA)
-    doc.add_heading('2. Verificación de Ámbito de Aplicación', level=1)
+    doc.add_heading('2. Verificación de las Hipótesis del Modelo', level=1)
     table = doc.add_table(rows=1, cols=2)
     table.style = 'Light List Accent 1'
     
@@ -79,7 +79,7 @@ def generar_reporte_word(inputs, resultados, checks):
     doc.add_paragraph()
 
     # 4. FICHA DE CÁLCULO (RESULTADOS)
-    doc.add_heading('3. Ficha de Cálculo', level=1)
+    doc.add_heading('3. Datos de Cálculo', level=1)
     
     # Tabla resumen de cálculo
     t_res = doc.add_table(rows=6, cols=3)
@@ -97,7 +97,7 @@ def generar_reporte_word(inputs, resultados, checks):
         ("Coef. α2", f"{inputs['a2']}", "Factor por Meteorización"),
         ("Coef. α3", f"{resultados['a3']:.3f}", "Factor por Discontinuidades (min(s, RQD/100))"),
         ("Presión Base (p0)", "1.0 MPa", "Presión de referencia"),
-        ("PRESIÓN ADMISIBLE", f"{resultados['q_adm']:.2f} MPa", "Valor final de diseño")
+        ("PRESIÓN ADMISIBLE", f"{resultados['q_adm']:.2f} MPa", "Valor de diseño")
     ]
     
     for i, (param, val, desc) in enumerate(data_rows):
@@ -123,7 +123,7 @@ def generar_reporte_word(inputs, resultados, checks):
     return bio
 
 # --- SECCIÓN A: INFO ---
-st.markdown('<div class="titulo-seccion">MÉTODO GUÍA CIMENTACIONES CARRETERA (4.5.3)</div>', unsafe_allow_html=True)
+st.markdown('<div class="titulo-seccion">MÉTODO GCOC (4.5.3)</div>', unsafe_allow_html=True)
 col_req, col_form = st.columns([0.6, 0.4])
 
 with col_req:
@@ -174,13 +174,13 @@ with st.sidebar:
     st.header("⚙️ Parámetros del Macizo")
     
     # 1. Resistencia
-    qu_input = st.number_input("Resistencia qu [MPa]", value=15.0, step=0.5, on_change=reset_reporte)
+    qu_input = st.number_input("Resistencia qu [MPa]", value=15.0, step=0.5, on_change=reset_informe)
     
     # 2. RQD
-    rqd_input = st.number_input("RQD [%]", value=50.0, min_value=0.0, max_value=100.0, step=1.0, on_change=reset_reporte)
+    rqd_input = st.number_input("RQD [%]", value=50.0, min_value=0.0, max_value=100.0, step=1.0, on_change=reset_informe)
 
     # 3. Espaciamiento (s)
-    s_input = st.number_input("Espaciamiento s [m]", value=0.30, step=0.05, min_value=0.01, format="%.2f", on_change=reset_reporte)
+    s_input = st.number_input("Espaciamiento s [m]", value=0.30, step=0.05, min_value=0.01, format="%.2f", on_change=reset_informe)
 
     st.divider()
     st.subheader("🪨 Factores de Calidad (α)")
@@ -192,7 +192,7 @@ with st.sidebar:
         "G3: Pizarras, areniscas, esquistos verticales": 0.6,
         "G4: Margas, Yesos, rocas blandas": 0.4
     }
-    txt_a1 = st.selectbox("Tipo de Roca (α1)", list(opciones_a1.keys()), on_change=reset_reporte)
+    txt_a1 = st.selectbox("Tipo de Roca (α1)", list(opciones_a1.keys()), on_change=reset_informe)
     val_a1 = opciones_a1[txt_a1]
 
     # 5. Selector Alfa 2
@@ -202,7 +202,7 @@ with st.sidebar:
         "Grado III: Moderadamente meteorizada": 0.5,
         "Grado IV o superior": 0.0 # Valor nulo
     }
-    txt_a2 = st.selectbox("Meteorización (α2)", list(opciones_a2.keys()), on_change=reset_reporte)
+    txt_a2 = st.selectbox("Meteorización (α2)", list(opciones_a2.keys()), on_change=reset_informe)
     val_a2 = opciones_a2[txt_a2]
 
 # --- LÓGICA DE CÁLCULO Y VALIDACIÓN ---
@@ -237,7 +237,7 @@ else:
 # --- VISUALIZACIÓN ---
 
 # 1. Tabla de Checks
-st.subheader("✅ Verificación de Aplicabilidad")
+st.subheader("✅ Verificación las Hipótesis del Modelo")
 df_checks = pd.DataFrame(list(checks_dict.items()), columns=["Criterio", "Estado"])
 df_checks.set_index("Criterio", inplace=True)
 
@@ -258,9 +258,9 @@ col_res1, col_res2 = st.columns([0.6, 0.4])
 with col_res1:
     # Tabla resumen de coeficientes
     df_resumen = pd.DataFrame([
-        {"Parámetro": "Coef. α1 (Tipo)", "Valor": val_a1, "Descripción": txt_a1.split(":")[0]},
-        {"Parámetro": "Coef. α2 (Meteo)", "Valor": val_a2, "Descripción": txt_a2.split(":")[0]},
-        {"Parámetro": "Coef. α3 (Disc)", "Valor": f"{val_a3:.3f}", "Descripción": "mín(s, RQD/100)"},
+        {"Parámetro": "Coef. α1 (Tipo de Roca)", "Valor": val_a1, "Descripción": txt_a1.split(":")[0]},
+        {"Parámetro": "Coef. α2 (Meteorización)", "Valor": val_a2, "Descripción": txt_a2.split(":")[0]},
+        {"Parámetro": "Coef. α3 (Discontinuidad)", "Valor": f"{val_a3:.3f}", "Descripción": "mín(s, RQD/100)"},
         {"Parámetro": "Resistencia (qu)", "Valor": f"{qu_input} MPa", "Descripción": "Dato de entrada"},
     ])
     st.table(df_resumen.set_index("Parámetro"))
@@ -280,17 +280,17 @@ with col_res2:
         st.warning(f"⚠️ {nota_limite}")
 
 # --- GESTIÓN DE ESTADO Y DESCARGA ---
-if 'reporte_buffer' not in st.session_state:
-    st.session_state.reporte_buffer = None
+if 'informe_buffer' not in st.session_state:
+    st.session_state.informe_buffer = None
 
 with st.sidebar:
     st.divider()
     st.header("📄 Informe Técnico")
     
-    if st.button("Generar Reporte Word"):
-        with st.spinner("Generando reporte..."):
+    if st.button("Generar informe Word"):
+        with st.spinner("Generando informe..."):
             try:
-                # Datos para el reporte
+                # Datos para el informe
                 inputs_repo = {
                     "qu": qu_input, "rqd": rqd_input, "s": s_input,
                     "a1": val_a1, "txt_a1": txt_a1,
@@ -298,18 +298,18 @@ with st.sidebar:
                 }
                 res_repo = {"a3": val_a3, "q_adm": q_final}
                 
-                buffer = generar_reporte_word(inputs_repo, res_repo, checks_dict)
+                buffer = generar_informe_word(inputs_repo, res_repo, checks_dict)
                 
-                st.session_state.reporte_buffer = buffer
-                st.session_state.reporte_nombre = f"Calculo_GuiaCarreteras_{datetime.now().strftime('%H%M')}.docx"
-                st.success("¡Reporte generado!")
+                st.session_state.informe_buffer = buffer
+                st.session_state.informe_nombre = f"Calculo_GuiaCarreteras_{datetime.now().strftime('%H%M')}.docx"
+                st.success("¡informe generado!")
             except Exception as e:
-                st.error(f"Error generando reporte: {e}")
+                st.error(f"Error generando informe: {e}")
 
-    if st.session_state.reporte_buffer is not None:
+    if st.session_state.informe_buffer is not None:
         st.download_button(
             label="📥 Descargar Documento",
-            data=st.session_state.reporte_buffer.getvalue(),
-            file_name=st.session_state.reporte_nombre,
+            data=st.session_state.informe_buffer.getvalue(),
+            file_name=st.session_state.informe_nombre,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
