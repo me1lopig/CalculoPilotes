@@ -301,7 +301,7 @@ if 'informe_buffer' not in st.session_state:
 
 with st.sidebar:
     st.divider()
-    st.header("📄 Informe Técnico")
+    st.header("📄 Informe Resultados")
     
     # 1. Generar
     if st.button("Generar informe Word"):
@@ -310,7 +310,7 @@ with st.sidebar:
                 buffer = generar_informe_word(qu_calc, s, a, estado_junta, [b_min, b_max, b_step],
                                             checks_dict, df_res, fig)
                 st.session_state.informe_buffer = buffer
-                st.session_state.informe_nombre = f"informe_Roca_{datetime.now().strftime('%H%M')}.docx"
+                st.session_state.informe_nombre = f"Informe_CTE_{datetime.now().strftime('%H%M')}.docx"
                 st.success("¡informe generado!")
             except Exception as e:
                 st.error(f"Error generando informe: {e}")
