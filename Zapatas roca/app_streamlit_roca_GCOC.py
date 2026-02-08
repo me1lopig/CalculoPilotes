@@ -311,5 +311,6 @@ with st.sidebar:
             label="📥 Descargar Documento",
             data=st.session_state.informe_buffer.getvalue(),
             file_name=st.session_state.informe_nombre,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            type="primary"
         )
