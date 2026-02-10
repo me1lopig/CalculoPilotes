@@ -342,7 +342,7 @@ with st.sidebar:
     if st.session_state.resultados is None:
         st.info("ℹ️ Primero realiza el cálculo.")
     else:
-        if st.button("📄 Crear Archivos de Informe", use_container_width=True):
+        if st.button("📄 Crear Archivos de Informe", use_container_width=True, type="primary"):
             with st.spinner("Generando Word e Imágenes..."):
                 ensayos_list = st.session_state.resultados["Ensayo"].unique()
                 st.session_state.zip_buffer = generar_zip_en_memoria(
