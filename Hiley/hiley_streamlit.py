@@ -188,9 +188,7 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
     run_fecha.italic = True
     run_metod.bold = True
     
-    # Línea separadora
-    #doc.add_paragraph('_' * 85)
-    #doc.add_paragraph() # Espacio vacío
+    doc.add_paragraph() # Espacio vacío simple para separar
 
     # 3. CONTENIDO POR ENSAYO
     for i, ensayo in enumerate(ensayos_unicos):
@@ -238,7 +236,7 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
         doc.add_paragraph()
 
         # --- B. RESULTADOS ---
-        doc.add_heading('2. Resultados', level=2)
+        doc.add_heading('2. Resultados de Capacidad de Carga', level=2)
         
         df_e = df_resultados[df_resultados["Ensayo"] == str(ensayo)].sort_values("Z(m)")
         
@@ -270,7 +268,7 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
             p_note.style = 'Caption'
 
         # --- C. GRÁFICAS ---
-        doc.add_heading('3. Gráficas', level=2)
+        doc.add_heading('3. Gráficas de Análisis', level=2)
         plt.style.use('default')
         
         # Gráfica 1: Presión
@@ -334,8 +332,9 @@ with st.sidebar:
         btn_calcular = False
     else:
         btn_calcular = st.button("🚀 Calcular", type="primary", use_container_width=True)
-    
-    st.markdown("Después de algún cambio en los datos, presiona el botón Calcular")
+
+    st.markdown("Después de modificar los datos de entrada, presione el botón 'Calcular' para actualizar los resultados.")
+    st.markdown("Y pulsar Crear archivos de Informe")  
     st.write("")
     st.markdown("---")
     st.header("3. Generar Informe")
@@ -376,7 +375,7 @@ with st.sidebar:
                 )
 
     st.markdown("---")
-    st.caption("v3.5 - ITQ")
+    st.caption("v3.7 - ITQ")
 
 # --- 7. ÁREA PRINCIPAL ---
 if not uploaded_file:
@@ -523,10 +522,11 @@ else:
                                     break
                             except: pass
                     
-                    # Fórmulas Hiley
-                    a = depth / 10.0 + 0.25
-                    e = 20.0 / n20 if n20 != 0 else 0
-                    if e > 0:
+                    # --- NUEVA LÓGICA N=0 (SUELOS BLANDOS) ---
+                    if n20 > 0:
+                        # Fórmulas Hiley Normales
+                        a = depth / 10.0 + 0.25
+                        e = 20.0 / n20
                         n_val = 0.7 - 0.7 / 19.0 * (e - 1.0)
                         c_val = 0.5 - 0.5 / 19.0 * (e - 1.0)
                         term1 = 63.5 * 76.0 * (1.0 + (n_val ** 2) * a)
@@ -534,7 +534,14 @@ else:
                         pres_car = term1 / term2
                         pres_adm = pres_car / factor_f
                     else:
-                        n_val, c_val, pres_car, pres_adm = 0, 0, 0, 0
+                        # Caso N=0: No hay resistencia
+                        n20 = 0.0 # Aseguramos que se muestre 0
+                        a = depth / 10.0 + 0.25 # Depende de Z, se mantiene
+                        e = 0.0
+                        n_val = 0.0
+                        c_val = 0.0
+                        pres_car = 0.0
+                        pres_adm = 0.0
                     
                     final_rows.append({
                         "Ensayo": str(ensayo),
