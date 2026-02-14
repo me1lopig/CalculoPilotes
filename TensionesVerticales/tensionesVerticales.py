@@ -11,7 +11,7 @@ import numpy as np # librería para cálculos matematicos
 import os
 
 # llamada a librerias definidas
-import funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
+import TensionesVerticales.funcionesCalculo as ft # libreria de funciones auxiliares y de cálculo
 
 # ruta absoluta de los archivos de calculo
 carpeta = os.getcwd()
