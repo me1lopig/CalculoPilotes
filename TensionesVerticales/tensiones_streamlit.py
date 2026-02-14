@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import io
 import xlsxwriter
 import zipfile
-from docx import Document # Nueva librería
+from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
@@ -30,66 +30,69 @@ def resetear_descarga():
 def dataframe_a_tabla_word(doc, df):
     """Convierte un DataFrame de Pandas en una tabla de Word con estilo."""
     t = doc.add_table(rows=df.shape[0] + 1, cols=df.shape[1])
-    t.style = 'Table Grid' # Estilo con bordes
+    t.style = 'Table Grid'
 
-    # Añadir encabezados
+    # --- ENCABEZADOS ---
     for j, col_name in enumerate(df.columns):
         cell = t.cell(0, j)
         cell.text = str(col_name)
-        # Negrita en encabezados
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
                 run.font.bold = True
+                run.font.size = Pt(9) # Fuente un poco más pequeña para que quepa bien
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Añadir datos
+    # --- DATOS ---
     for i in range(df.shape[0]):
         for j in range(df.shape[1]):
             val = df.iloc[i, j]
-            # Formatear números si es necesario
-            if isinstance(val, float):
-                t.cell(i + 1, j).text = f"{val:.2f}"
+            cell = t.cell(i + 1, j)
+            
+            if isinstance(val, (int, float)):
+                cell.text = f"{val:.2f}"
+                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
             else:
-                t.cell(i + 1, j).text = str(val)
+                cell.text = str(val) 
+                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.size = Pt(9)
 
 def generar_informe_word(df_in, df_out, img_stream, nf_val, usar_nf):
     """Crea el objeto Documento de Word completo."""
     doc = Document()
     
     # Título
-    titulo = doc.add_heading('Informe de Tensiones Geostáticas', 0)
+    titulo = doc.add_heading('Memoria de Cálculo: Tensiones Verticales', 0)
     titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # Sección 1: Datos de Entrada
-    doc.add_heading('1. Datos de Partida', level=1)
-    doc.add_paragraph('Estratigrafía definida por el usuario:')
+    doc.add_heading('1. Modelo Geotécnico Definido', level=1)
+    doc.add_paragraph('Estratigrafía y parámetros de identificación:')
     dataframe_a_tabla_word(doc, df_in)
     
-    doc.add_paragraph() # Espacio
+    doc.add_paragraph() 
     p_nf = doc.add_paragraph()
-    runner = p_nf.add_run('Condición Hidráulica: ')
+    runner = p_nf.add_run('Condición NF: ')
     runner.font.bold = True
     if usar_nf:
-        p_nf.add_run(f"Nivel Freático a {nf_val:.2f} m de profundidad.")
+        p_nf.add_run(f"Nivel Freático considerado a {nf_val:.2f} m de profundidad.")
     else:
         p_nf.add_run("Sin Nivel Freático (Suelo no saturado).")
 
     # Sección 2: Gráfica
-    doc.add_heading('2. Representación Gráfica', level=1)
-    # Importante: Rebobinar el stream de la imagen antes de leerlo
+    doc.add_heading('2. Perfil de Tensiones', level=1)
     img_stream.seek(0) 
     doc.add_picture(img_stream, width=Inches(6))
-    last_paragraph = doc.paragraphs[-1] 
-    last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Sección 3: Resultados (Limitamos a las primeras 50 filas si es muy largo para no romper el word)
-    doc.add_heading('3. Tabla de Resultados (Resumen)', level=1)
+    # Sección 3: Resultados (COMPLETO)
+    #doc.add_heading('3. Tabla de Resultados (Listado Completo)', level=1)
+    #doc.add_paragraph('A continuación se detallan los valores de tensión calculados metro a metro (paso 0.10m):')
     
-    # Si la tabla es muy larga, avisamos en el Word
-    if len(df_out) > 60:
-        doc.add_paragraph('Nota: Se muestran los primeros 60 registros. Para ver la tabla completa, consulte el archivo Excel adjunto.')
-        dataframe_a_tabla_word(doc, df_out.head(60))
-    else:
-        dataframe_a_tabla_word(doc, df_out)
+    # --- CAMBIO IMPORTANTE: Sin límite de filas ---
+    #dataframe_a_tabla_word(doc, df_out)
 
     return doc
 
@@ -119,31 +122,41 @@ def presion_total(cotas, valor_nf, pe_saturado, pe_seco, valor_cota):
     lista_cotas = sorted(list(set(cotas + [valor_nf]))) 
     resultado = obtener_maximo_menor(lista_cotas, valor_cota)
     idx_terreno = parametro_terreno(cotas, valor_cota)
+    
     if idx_terreno >= len(pe_saturado): idx_terreno = len(pe_saturado) - 1
+
     p_sat_val = pe_saturado[idx_terreno]
     p_seco_val = pe_seco[idx_terreno]
+    
     peso = p_seco_val if valor_cota <= valor_nf else p_sat_val
     presion_acumulada = (valor_cota - resultado) * peso
+    
     try: idx_resultado = lista_cotas.index(resultado)
     except ValueError: idx_resultado = 0
+    
     for j in range(idx_resultado, 0, -1):
         cota_actual = lista_cotas[j]
         cota_anterior = lista_cotas[j-1]
         espesor = cota_actual - cota_anterior
         cota_media = (cota_actual + cota_anterior) / 2
         idx_t = parametro_terreno(cotas, cota_media)
+        
         if idx_t >= len(pe_saturado): idx_t = len(pe_saturado) - 1
+        
         p_sat_capa = pe_saturado[idx_t]
         p_seco_capa = pe_seco[idx_t]
+        
         if cota_actual <= valor_nf: peso_tramo = p_seco_capa
         else: peso_tramo = p_sat_capa
         presion_acumulada += espesor * peso_tramo
+        
     return presion_acumulada
 
 def calcular_perfil_tensiones(df_input, nivel_freatico, usar_nf_logic):
     espesores = [0] + df_input['Espesor (m)'].tolist()
-    pe_seco = [0] + df_input['Peso Seco (kN/m³)'].tolist()
+    pe_seco = [0] + df_input['Peso ap. (kN/m³)'].tolist()
     pe_saturado = [0] + df_input['Peso Sat. (kN/m³)'].tolist()
+    
     cotas = []
     acumulado = 0
     for esp in espesores:
@@ -176,14 +189,14 @@ def calcular_perfil_tensiones(df_input, nivel_freatico, usar_nf_logic):
 # 3. INTERFAZ DE USUARIO
 # ==========================================
 
-st.title("🌍 Calculadora de Tensiones Geostáticas")
+st.title("🌍 Calculadora de Tensiones Verticales")
 
 # --- ENTRADA DE DATOS ---
 col1, col2 = st.columns([3, 1])
 
 datos_iniciales = pd.DataFrame([
-    {"Espesor (m)": 5.0, "Peso Seco (kN/m³)": 18.0, "Peso Sat. (kN/m³)": 20.0},
-    {"Espesor (m)": 10.0, "Peso Seco (kN/m³)": 19.0, "Peso Sat. (kN/m³)": 21.0},
+    {"Unidad": "UG-01", "Espesor (m)": 5.0, "Peso ap. (kN/m³)": 18.0, "Peso Sat. (kN/m³)": 20.0},
+    {"Unidad": "UG-02", "Espesor (m)": 10.0, "Peso ap. (kN/m³)": 19.0, "Peso Sat. (kN/m³)": 21.0},
 ])
 
 with col1:
@@ -193,9 +206,10 @@ with col1:
         num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "Espesor (m)": st.column_config.NumberColumn("Espesor", min_value=0.1, format="%.2f"),
-            "Peso Seco (kN/m³)": st.column_config.NumberColumn("γ seco", min_value=1.0, format="%.1f"),
-            "Peso Sat. (kN/m³)": st.column_config.NumberColumn("γ sat", min_value=1.0, format="%.1f"),
+            "Unidad": st.column_config.TextColumn("Unidad Geotécnica", width="medium", required=True),
+            "Espesor (m)": st.column_config.NumberColumn("Espesor (m)", min_value=0.1, format="%.2f"),
+            "Peso ap. (kN/m³)": st.column_config.NumberColumn("γ ap. (kN/m³)", min_value=1.0, format="%.1f"),
+            "Peso Sat. (kN/m³)": st.column_config.NumberColumn("γ sat. (kN/m³)", min_value=1.0, format="%.1f"),
         },
         key="editor_datos" 
     )
@@ -217,7 +231,7 @@ with col2:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.header("💧 Condiciones Hidráulicas")
+    st.header("💧 Condiciones NF")
     usar_nf = st.checkbox("Considerar Nivel Freático", value=True, on_change=resetear_descarga)
     
     if usar_nf:
@@ -256,7 +270,7 @@ if not df_estratos.empty:
     ax.plot(df_resultados["Presión de Poro (kPa)"], df_resultados["Profundidad (m)"], 'green', linestyle=':', label='Presión de Poro')
     
     if usar_nf and nf_input <= prof_total:
-        ax.axhline(y=nf_input, color='cyan', linestyle='-.', label=f'N.F. ({nf_input}m)')
+        ax.axhline(y=nf_input, color='cyan', linestyle='-.', label=f'N.F. ({nf_input:.2f}m)')
     
     ax.invert_yaxis()
     ax.set_xlabel('Tensión [kPa]'); ax.set_ylabel('Profundidad [m]')
@@ -278,11 +292,11 @@ if not df_estratos.empty:
     with col_gen:
         if st.button("🔄 Generar Archivos (Excel + Word + PNG)", type="primary"):
             
-            # 1. IMAGEN (Generar primero para usar en Word)
+            # 1. IMAGEN 
             img_buffer = io.BytesIO()
             fig.savefig(img_buffer, format='png', dpi=300, bbox_inches='tight')
             
-            # 2. EXCEL
+            # 2. EXCEL 
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
                 df_resultados.to_excel(writer, index=False, sheet_name='Resultados')
@@ -293,19 +307,19 @@ if not df_estratos.empty:
                 
                 df_estratos.to_excel(writer, index=False, sheet_name='Datos de Entrada')
                 worksheet_in = writer.sheets['Datos de Entrada']
-                worksheet_in.set_column('A:C', 18, formato_num)
+                worksheet_in.set_column('A:A', 25) 
+                worksheet_in.set_column('B:D', 18, formato_num)
 
-            # 3. WORD (Informe Profesional)
-            # Pasamos img_buffer (y lo rebobinamos dentro de la función)
+            # 3. WORD (Ahora incluye tabla completa)
             doc_object = generar_informe_word(df_estratos, df_resultados, img_buffer, nf_input, usar_nf)
             word_buffer = io.BytesIO()
             doc_object.save(word_buffer)
             
-            # 4. ZIP (Empaquetar todo)
+            # 4. ZIP 
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr("Resultados_Calculo.xlsx", excel_buffer.getvalue())
-                zf.writestr("Informe_Geotecnico.docx", word_buffer.getvalue())
+                zf.writestr("Informe.docx", word_buffer.getvalue())
                 zf.writestr("Grafica_Tensiones.png", img_buffer.getvalue())
             
             st.session_state.buffer_zip = zip_buffer.getvalue()
@@ -314,11 +328,11 @@ if not df_estratos.empty:
 
     with col_down:
         if st.session_state.archivo_listo:
-            st.success("✅ Informe generado correctamente.")
+            st.success("✅ Informe generado.")
             st.download_button(
                 label="📦 Descargar Informe (ZIP)",
                 data=st.session_state.buffer_zip,
-                file_name="Informe_Geotecnico_Completo.zip",
+                file_name="Informe.zip",
                 mime="application/zip",
                 type="secondary"
             )

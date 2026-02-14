@@ -1,5 +1,4 @@
 # Libreria de funciones usadas en los cálculos de tensiones del terreno
-# Versión LIMPIA y OPTIMIZADA (Sin parámetros de pilotes)
 
 import numpy as np
 import matplotlib.pyplot as plt
