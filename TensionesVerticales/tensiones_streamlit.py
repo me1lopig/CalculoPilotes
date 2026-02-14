@@ -87,7 +87,7 @@ def generar_informe_word(df_in, df_out, img_stream, nf_val, usar_nf):
     doc.add_picture(img_stream, width=Inches(6))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Sección 3: Resultados (COMPLETO)
+    # Sección 3: Resultados por ahora no se pone tarda mucho
     #doc.add_heading('3. Tabla de Resultados (Listado Completo)', level=1)
     #doc.add_paragraph('A continuación se detallan los valores de tensión calculados metro a metro (paso 0.10m):')
     
