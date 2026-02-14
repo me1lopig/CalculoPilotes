@@ -375,7 +375,7 @@ with st.sidebar:
                 )
 
     st.markdown("---")
-    st.caption("v3.7 - ITQ")
+    st.caption("v4.0 - ITQ")
 
 # --- 7. ÁREA PRINCIPAL ---
 if not uploaded_file:
@@ -409,24 +409,25 @@ else:
                 st.markdown("##### 🛠️ Configuración de Tipos de suelo")
                 max_depth_real = df_base[df_base[col_desc] == ensayo][col_depth].max()
                 
-                # Sin redondeo (exactitud)
-                df_template = pd.DataFrame({
-                    "Desde (m)": [0.0],
-                    "Hasta (m)": [float(max_depth_real)], 
-                    "Material": ["Arenas o Gravas (F=25)"]
-                })
+                # 1. INICIALIZACIÓN: Crear DataFrame inicial solo si no existe en Session State
+                if ensayo not in st.session_state.config_tramos:
+                    st.session_state.config_tramos[ensayo] = pd.DataFrame({
+                        "Desde (m)": [0.0],
+                        "Hasta (m)": [float(max_depth_real)], 
+                        "Material": ["Arenas o Gravas (F=25)"]
+                    })
                 
-                if ensayo in st.session_state.config_tramos:
-                    data_to_show = st.session_state.config_tramos[ensayo]
-                else:
-                    data_to_show = df_template
+                # 2. CAPTURAR ESTADO ACTUAL (Para comparar cambios)
+                df_anterior = st.session_state.config_tramos[ensayo].copy()
 
+                # 3. EDITOR DE DATOS
+                # Importante: No usar on_change, dejamos que el if de abajo haga el trabajo
                 edited_df = st.data_editor(
-                    data_to_show,
+                    st.session_state.config_tramos[ensayo],
                     num_rows="dynamic",
                     column_config={
-                        "Desde (m)": st.column_config.NumberColumn(format="%.2f"),
-                        "Hasta (m)": st.column_config.NumberColumn(format="%.2f"),
+                        "Desde (m)": st.column_config.NumberColumn(format="%.2f", default=0.0),
+                        "Hasta (m)": st.column_config.NumberColumn(format="%.2f", default=0.0),
                         "Material": st.column_config.SelectboxColumn(
                             "Tipo de Suelo",
                             options=list(MATERIALES_F.keys()),
@@ -436,22 +437,43 @@ else:
                     key=f"editor_{ensayo}",
                     use_container_width=True
                 )
-                
-                st.session_state.config_tramos[ensayo] = edited_df
 
-                # Validaciones
+                # 4. LÓGICA DE GUARDADO FORZADO Y RECARGA
+                # Si el dataframe editado es diferente al que teníamos en memoria...
+                if not edited_df.equals(df_anterior):
+                    # ...lo guardamos inmediatamente en el estado global
+                    st.session_state.config_tramos[ensayo] = edited_df
+                    # ...y recargamos la página para "fijar" los cambios y limpiar el buffer del editor
+                    st.rerun()
+
+                # 5. VALIDACIONES (CORREGIDO: Sin try-except agresivo)
                 if not edited_df.empty:
-                    errores_fila = edited_df[edited_df["Desde (m)"] >= edited_df["Hasta (m)"]]
-                    if not errores_fila.empty:
-                        st.error("⛔ **Error Lógico:** 'Desde' >= 'Hasta'.")
-                        hay_error_grave = True
+                    # Trabajamos sobre una copia para validar sin romper nada
+                    df_val = edited_df.copy()
                     
-                    max_definido = edited_df["Hasta (m)"].max()
-                    # Integridad (margen error 5cm)
-                    if max_definido < (max_depth_real - 0.05):
-                        metros_faltantes = max_depth_real - max_definido
-                        st.warning(f"⚠️ **Incompleto:** El ensayo llega a **{max_depth_real:.2f}m**.")
-                        st.error(f"❌ **Faltan definir: {metros_faltantes:.2f} metros**")
+                    # Convertimos a numérico forzando errores a NaN (útil si estás escribiendo una fila nueva)
+                    df_val["Desde (m)"] = pd.to_numeric(df_val["Desde (m)"], errors='coerce')
+                    df_val["Hasta (m)"] = pd.to_numeric(df_val["Hasta (m)"], errors='coerce')
+                    
+                    # Eliminamos filas que no tengan números válidos para hacer la comprobación
+                    df_val_clean = df_val.dropna(subset=["Desde (m)", "Hasta (m)"])
+                    
+                    if not df_val_clean.empty:
+                        # A) Chequeo de lógica Desde < Hasta
+                        errores_fila = df_val_clean[df_val_clean["Desde (m)"] >= df_val_clean["Hasta (m)"]]
+                        if not errores_fila.empty:
+                            st.error("⛔ **Error Lógico:** 'Desde' >= 'Hasta'.")
+                            hay_error_grave = True
+                        
+                        # B) Chequeo de profundidad total (El aviso que faltaba)
+                        max_definido = df_val_clean["Hasta (m)"].max()
+                        
+                        # Margen de tolerancia de 5cm
+                        if max_definido < (max_depth_real - 0.05):
+                            metros_faltantes = max_depth_real - max_definido
+                            st.warning(f"⚠️ **Incompleto:** El ensayo llega a **{max_depth_real:.2f}m**.")
+                            st.error(f"❌ **Faltan definir: {metros_faltantes:.2f} metros**")
+                            # hay_error_grave = True  # Descomenta si quieres bloquear el cálculo
 
                 # Resultados Visuales
                 if st.session_state.resultados is not None:
@@ -461,7 +483,6 @@ else:
                     if not df_ensayo.empty:
                         st.divider()
                         st.markdown("##### 📊 Resultados")
-                        # 3 Decimales variables intermedias
                         st.dataframe(
                             df_ensayo.style.format({
                                 "Z(m)": "{:.2f}", 
