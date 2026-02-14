@@ -37,8 +37,7 @@ if 'word_buffer' not in st.session_state:
     
 if 'config_tramos' not in st.session_state:
     st.session_state.config_tramos = {}
-if 'errores_detectados' not in st.session_state:
-    st.session_state.errores_detectados = False
+# Nota: 'errores_detectados' se calcula dinámicamente en cada ejecución
 
 # --- 3. CONSTANTES ---
 MATERIALES_F = {
@@ -51,10 +50,6 @@ MATERIALES_F = {
 
 # --- 4. FUNCIONES AUXILIARES DE ESTILO WORD ---
 def set_table_header_bg_color(cell, color_hex):
-    """
-    Aplica un color de fondo a una celda de tabla en Word modificando el XML.
-    color_hex: string sin '#' (ej: "D9E1F2")
-    """
     tcPr = cell._tc.get_or_add_tcPr()
     shd = OxmlElement('w:shd')
     shd.set(qn('w:val'), 'clear')
@@ -63,7 +58,6 @@ def set_table_header_bg_color(cell, color_hex):
     tcPr.append(shd)
 
 # --- 5. FUNCIONES DE GENERACIÓN ---
-
 def _aplicar_estilo_hoja(ws, headers, titulo='Cálculos Hiley'):
     thin_side = Side(style='thin', color='B0B0B0')
     border_thin = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
@@ -107,7 +101,7 @@ def _escribir_df_en_hoja(ws, df_calc, headers, titulo):
             else:
                 c.alignment = align_center
                 if isinstance(val, (int, float, np.integer, np.floating)):
-                    if j in [5, 6, 7, 8]: # a, e, n, c
+                    if j in [5, 6, 7, 8]: 
                         c.number_format = '0.000'
                     else:
                         c.number_format = '0.00'
@@ -165,22 +159,17 @@ def generar_zip_en_memoria(df_resultados, ensayos_unicos):
 
 def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
     doc = Document()
-    
-    # 1. ESTILO GLOBAL
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Calibri'
     font.size = Pt(11)
     
-    # 2. ENCABEZADO TIPO INFORME TÉCNICO
-    # Título Principal
     titulo = doc.add_heading('Informe de resultados', 0)
     titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run_tit = titulo.runs[0]
-    run_tit.font.color.rgb = RGBColor(0, 0, 0) # Negro
+    run_tit.font.color.rgb = RGBColor(0, 0, 0)
     run_tit.font.bold = True
     
-    # Metadatos alineados a la derecha
     p_meta = doc.add_paragraph()
     p_meta.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     run_fecha = p_meta.add_run(f'Fecha de emisión: {datetime.now().strftime("%d/%m/%Y")}\n')
@@ -188,46 +177,36 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
     run_fecha.italic = True
     run_metod.bold = True
     
-    doc.add_paragraph() # Espacio vacío simple para separar
+    doc.add_paragraph()
 
-    # 3. CONTENIDO POR ENSAYO
     for i, ensayo in enumerate(ensayos_unicos):
-        # Título del Ensayo (Azul profesional)
         h1 = doc.add_heading(f'ENSAYO: {ensayo}', level=1)
         h1.runs[0].font.color.rgb = RGBColor(31, 78, 121) 
         
-        # --- A. DATOS DE ENTRADA ---
         doc.add_heading('1.Parámetros del Suelo', level=2)
         
         if ensayo in config_tramos:
             df_input = config_tramos[ensayo]
-            
-            # Tabla Estilizada
             table = doc.add_table(rows=1, cols=3)
             table.style = 'Table Grid'
             table.autofit = False 
             
-            # Encabezados
             hdr_cells = table.rows[0].cells
             headers = ['Prof. Desde (m)', 'Prof. Hasta (m)', 'Tipo de Material (F)']
             
             for j, text in enumerate(headers):
                 cell = hdr_cells[j]
                 cell.text = text
-                # Estilo: Negrita + Fondo Gris Claro
                 run = cell.paragraphs[0].runs[0]
                 run.font.bold = True
                 set_table_header_bg_color(cell, "D9D9D9") 
                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-            # Datos
             for _, row in df_input.iterrows():
                 row_cells = table.add_row().cells
                 row_cells[0].text = f"{row['Desde (m)']:.2f}"
                 row_cells[1].text = f"{row['Hasta (m)']:.2f}"
                 row_cells[2].text = str(row['Material'])
-                
-                # Centrado
                 row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
                 row_cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         else:
@@ -235,7 +214,6 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
 
         doc.add_paragraph()
 
-        # --- B. RESULTADOS ---
         doc.add_heading('2. Resultados de Capacidad de Carga', level=2)
         
         df_e = df_resultados[df_resultados["Ensayo"] == str(ensayo)].sort_values("Z(m)")
@@ -252,7 +230,7 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
                 cell.text = text
                 run = cell.paragraphs[0].runs[0]
                 run.font.bold = True
-                set_table_header_bg_color(cell, "D9E1F2") # Azul claro
+                set_table_header_bg_color(cell, "D9E1F2") 
                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             
             for _, row in df_e.iterrows():
@@ -260,18 +238,15 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
                 row_cells[0].text = f"{row['Z(m)']:.2f}"
                 row_cells[1].text = f"{row['N(20)']:.0f}"
                 row_cells[2].text = f"{row['Presión Admisible (kg/cm2)']:.2f}"
-                
                 for cell in row_cells:
                     cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             
             p_note = doc.add_paragraph(f"Total de registros calculados: {len(df_e)}")
             p_note.style = 'Caption'
 
-        # --- C. GRÁFICAS ---
         doc.add_heading('3. Gráficas de Análisis', level=2)
         plt.style.use('default')
         
-        # Gráfica 1: Presión
         fig1, ax1 = plt.subplots(figsize=(6.5, 4))
         ax1.plot(df_e['Presión Admisible (kg/cm2)'], df_e['Z(m)'], marker='o', markersize=4, linewidth=2, color='#1F4E79')
         ax1.invert_yaxis()
@@ -289,7 +264,6 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
         doc.add_paragraph("Fig 1. Evolución de la Presión Admisible.", style='Caption')
         doc.add_paragraph()
 
-        # Gráfica 2: Golpeos
         fig2, ax2 = plt.subplots(figsize=(6.5, 4))
         ax2.plot(df_e['N(20)'], df_e['Z(m)'], marker='s', markersize=4, linewidth=2, color='#C00000')
         ax2.invert_yaxis()
@@ -306,8 +280,6 @@ def generar_word_en_memoria(df_resultados, config_tramos, ensayos_unicos):
         doc.add_picture(mem_fig2, width=Inches(6.0))
         doc.add_paragraph("Fig 2. Evolución del número de golpes N(20).", style='Caption')
 
-        # --- CONTROL DE SALTO DE PÁGINA ---
-        # Solo añadir salto si NO es el último ensayo de la lista
         if i < len(ensayos_unicos) - 1:
             doc.add_page_break()
 
@@ -327,11 +299,10 @@ with st.sidebar:
     st.markdown("---")
     st.header("2. Cálculos")
     
-    if st.session_state.errores_detectados:
-        st.error("⛔ Corrige los errores indicados en las pestañas.")
-        btn_calcular = False
-    else:
-        btn_calcular = st.button("🚀 Calcular", type="primary", use_container_width=True)
+    # --- PLACEHOLDER PARA EL BOTÓN ---
+    # Aquí reservamos el espacio visual para el botón.
+    # Se rellenará al final del script con el estado correcto (activo/inactivo).
+    placeholder_calculo = st.empty()
 
     st.markdown("Después de modificar los datos de entrada, presione el botón 'Calcular' para actualizar los resultados.")
     st.markdown("Y pulsar Crear archivos de Informe")  
@@ -375,7 +346,7 @@ with st.sidebar:
                 )
 
     st.markdown("---")
-    st.caption("v4.0 - ITQ")
+    st.caption("v4.5 - ITQ Final")
 
 # --- 7. ÁREA PRINCIPAL ---
 if not uploaded_file:
@@ -409,7 +380,7 @@ else:
                 st.markdown("##### 🛠️ Configuración de Tipos de suelo")
                 max_depth_real = df_base[df_base[col_desc] == ensayo][col_depth].max()
                 
-                # 1. INICIALIZACIÓN: Crear DataFrame inicial solo si no existe en Session State
+                # 1. INICIALIZACIÓN
                 if ensayo not in st.session_state.config_tramos:
                     st.session_state.config_tramos[ensayo] = pd.DataFrame({
                         "Desde (m)": [0.0],
@@ -417,11 +388,10 @@ else:
                         "Material": ["Arenas o Gravas (F=25)"]
                     })
                 
-                # 2. CAPTURAR ESTADO ACTUAL (Para comparar cambios)
+                # 2. CAPTURAR ESTADO
                 df_anterior = st.session_state.config_tramos[ensayo].copy()
 
                 # 3. EDITOR DE DATOS
-                # Importante: No usar on_change, dejamos que el if de abajo haga el trabajo
                 edited_df = st.data_editor(
                     st.session_state.config_tramos[ensayo],
                     num_rows="dynamic",
@@ -438,44 +408,55 @@ else:
                     use_container_width=True
                 )
 
-                # 4. LÓGICA DE GUARDADO FORZADO Y RECARGA
-                # Si el dataframe editado es diferente al que teníamos en memoria...
+                # 4. GUARDADO Y RECARGA
                 if not edited_df.equals(df_anterior):
-                    # ...lo guardamos inmediatamente en el estado global
                     st.session_state.config_tramos[ensayo] = edited_df
-                    # ...y recargamos la página para "fijar" los cambios y limpiar el buffer del editor
                     st.rerun()
 
-                # 5. VALIDACIONES (CORREGIDO: Sin try-except agresivo)
+                # 5. VALIDACIONES (Textos Originales Preservados)
                 if not edited_df.empty:
-                    # Trabajamos sobre una copia para validar sin romper nada
                     df_val = edited_df.copy()
                     
-                    # Convertimos a numérico forzando errores a NaN (útil si estás escribiendo una fila nueva)
-                    df_val["Desde (m)"] = pd.to_numeric(df_val["Desde (m)"], errors='coerce')
-                    df_val["Hasta (m)"] = pd.to_numeric(df_val["Hasta (m)"], errors='coerce')
+                    # Normalización
+                    df_val["Desde (m)"] = pd.to_numeric(df_val["Desde (m)"], errors='coerce').fillna(0).round(2)
+                    df_val["Hasta (m)"] = pd.to_numeric(df_val["Hasta (m)"], errors='coerce').fillna(0).round(2)
                     
-                    # Eliminamos filas que no tengan números válidos para hacer la comprobación
-                    df_val_clean = df_val.dropna(subset=["Desde (m)", "Hasta (m)"])
+                    # Filtro de filas vacías (0 a 0) para evitar errores durante la escritura
+                    df_val_util = df_val.dropna(subset=["Desde (m)", "Hasta (m)"])
+                    df_val_util = df_val_util[~((df_val_util["Desde (m)"] == 0) & (df_val_util["Hasta (m)"] == 0))]
                     
-                    if not df_val_clean.empty:
-                        # A) Chequeo de lógica Desde < Hasta
-                        errores_fila = df_val_clean[df_val_clean["Desde (m)"] >= df_val_clean["Hasta (m)"]]
+                    if not df_val_util.empty:
+                        # 1. Desde < Hasta
+                        errores_fila = df_val_util[df_val_util["Desde (m)"] >= df_val_util["Hasta (m)"]]
                         if not errores_fila.empty:
-                            st.error("⛔ **Error Lógico:** 'Desde' >= 'Hasta'.")
+                            st.error(f"⛔ **Error Lógico:** En {len(errores_fila)} fila(s), el inicio es mayor o igual al final.")
                             hay_error_grave = True
                         
-                        # B) Chequeo de profundidad total (El aviso que faltaba)
-                        max_definido = df_val_clean["Hasta (m)"].max()
+                        # 2. Continuidad (Solo en filas buenas)
+                        df_validas = df_val_util[df_val_util["Desde (m)"] < df_val_util["Hasta (m)"]]
+                        df_sorted = df_validas.sort_values("Desde (m)").reset_index(drop=True)
                         
-                        # Margen de tolerancia de 5cm
+                        if len(df_sorted) > 1:
+                            for k in range(len(df_sorted) - 1):
+                                fin_actual = df_sorted.loc[k, "Hasta (m)"]
+                                inicio_siguiente = df_sorted.loc[k+1, "Desde (m)"]
+                                
+                                # Tolerancia de 1cm
+                                if abs(fin_actual - inicio_siguiente) > 0.01:
+                                    st.error(
+                                        f"⛔ **Salto o Solape:** El tramo que termina en **{fin_actual:.2f}m** no coincide con el siguiente que empieza en **{inicio_siguiente:.2f}m**."
+                                    )
+                                    hay_error_grave = True
+
+                        # 3. Profundidad
+                        max_definido = df_val_util["Hasta (m)"].max()
                         if max_definido < (max_depth_real - 0.05):
                             metros_faltantes = max_depth_real - max_definido
                             st.warning(f"⚠️ **Incompleto:** El ensayo llega a **{max_depth_real:.2f}m**.")
-                            st.error(f"❌ **Faltan definir: {metros_faltantes:.2f} metros**")
-                            # hay_error_grave = True  # Descomenta si quieres bloquear el cálculo
+                            st.error(f"❌ **Faltan definir: {metros_faltantes:.2f} metros al final.**")
+                            # hay_error_grave = True # Bloqueo opcional si faltan metros
 
-                # Resultados Visuales
+                # Visualización
                 if st.session_state.resultados is not None:
                     df_res = st.session_state.resultados
                     df_ensayo = df_res[df_res["Ensayo"] == str(ensayo)]
@@ -519,62 +500,58 @@ else:
                             ax2.set_title("N(20)")
                             st.pyplot(fig2)
 
-        st.session_state.errores_detectados = hay_error_grave
-
-        # --- LÓGICA DE CÁLCULO ---
-        if btn_calcular and not hay_error_grave:
-            with st.spinner("Calculando..."):
-                st.session_state.zip_buffer = None
-                st.session_state.word_buffer = None
-                
-                final_rows = []
-                for idx, row in df_base.iterrows():
-                    ensayo = row[col_desc]
-                    depth = row[col_depth]
-                    n20 = row[col_blows]
-                    
-                    factor_f = 50.0 
-                    if ensayo in st.session_state.config_tramos:
-                        tramos_df = st.session_state.config_tramos[ensayo]
-                        for _, tramo in tramos_df.iterrows():
-                            try:
-                                if float(tramo["Desde (m)"]) <= depth <= float(tramo["Hasta (m)"]):
-                                    factor_f = MATERIALES_F.get(tramo["Material"], 50.0)
-                                    break
-                            except: pass
-                    
-                    # --- NUEVA LÓGICA N=0 (SUELOS BLANDOS) ---
-                    if n20 > 0:
-                        # Fórmulas Hiley Normales
-                        a = depth / 10.0 + 0.25
-                        e = 20.0 / n20
-                        n_val = 0.7 - 0.7 / 19.0 * (e - 1.0)
-                        c_val = 0.5 - 0.5 / 19.0 * (e - 1.0)
-                        term1 = 63.5 * 76.0 * (1.0 + (n_val ** 2) * a)
-                        term2 = (e + c_val) * (1.0 + a) * 20.0
-                        pres_car = term1 / term2
-                        pres_adm = pres_car / factor_f
-                    else:
-                        # Caso N=0: No hay resistencia
-                        n20 = 0.0 # Aseguramos que se muestre 0
-                        a = depth / 10.0 + 0.25 # Depende de Z, se mantiene
-                        e = 0.0
-                        n_val = 0.0
-                        c_val = 0.0
-                        pres_car = 0.0
-                        pres_adm = 0.0
-                    
-                    final_rows.append({
-                        "Ensayo": str(ensayo),
-                        "Z(m)": depth, "N(20)": n20, "F": factor_f,
-                        "a": a, "e": e, "n": n_val, "c": c_val,
-                        "Presión Característica (kg/cm2)": pres_car,
-                        "Presión Admisible (kg/cm2)": pres_adm
-                    })
-                
-                st.session_state.resultados = pd.DataFrame(final_rows)
-                st.toast("✅ Cálculos actualizados", icon="⚡")
-                st.rerun()
+        # --- GESTIÓN DEL BOTÓN (USANDO PLACEHOLDER) ---
+        # Ahora que sabemos si 'hay_error_grave' es True o False, dibujamos el botón arriba
+        with placeholder_calculo:
+            if hay_error_grave:
+                st.error("⛔ Corrige los errores indicados en las pestañas para calcular.")
+            else:
+                if st.button("🚀 Calcular", type="primary", use_container_width=True):
+                    with st.spinner("Calculando..."):
+                        final_rows = []
+                        for idx, row in df_base.iterrows():
+                            ensayo = row[col_desc]
+                            depth = row[col_depth]
+                            n20 = row[col_blows]
+                            
+                            factor_f = 50.0 
+                            if ensayo in st.session_state.config_tramos:
+                                tramos_df = st.session_state.config_tramos[ensayo]
+                                for _, tramo in tramos_df.iterrows():
+                                    try:
+                                        if float(tramo["Desde (m)"]) <= depth <= float(tramo["Hasta (m)"]):
+                                            factor_f = MATERIALES_F.get(tramo["Material"], 50.0)
+                                            break
+                                    except: pass
+                            
+                            if n20 > 0:
+                                a = depth / 10.0 + 0.25
+                                e = 20.0 / n20
+                                n_val = 0.7 - 0.7 / 19.0 * (e - 1.0)
+                                c_val = 0.5 - 0.5 / 19.0 * (e - 1.0)
+                                term1 = 63.5 * 76.0 * (1.0 + (n_val ** 2) * a)
+                                term2 = (e + c_val) * (1.0 + a) * 20.0
+                                pres_car = term1 / term2
+                                pres_adm = pres_car / factor_f
+                            else:
+                                n20 = 0.0
+                                a = depth / 10.0 + 0.25
+                                e = 0.0
+                                n_val = 0.0
+                                c_val = 0.0
+                                pres_car = 0.0
+                                pres_adm = 0.0
+                            
+                            final_rows.append({
+                                "Ensayo": str(ensayo),
+                                "Z(m)": depth, "N(20)": n20, "F": factor_f,
+                                "a": a, "e": e, "n": n_val, "c": c_val,
+                                "Presión Característica (kg/cm2)": pres_car,
+                                "Presión Admisible (kg/cm2)": pres_adm
+                            })
+                        
+                        st.session_state.resultados = pd.DataFrame(final_rows)
+                        st.rerun()
 
     except Exception as e:
         st.error(f"Error crítico: {e}")
