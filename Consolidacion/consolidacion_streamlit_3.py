@@ -17,7 +17,7 @@ except AttributeError:
     warnings.simplefilter('ignore', np.RankWarning)
 
 st.set_page_config(page_title="Consolidación 1D", layout="wide")
-st.title("Modelo de Consolidación 1D Avanzado")
+st.title("Modelo de Consolidación 1D para carga extensa")
 
 # --- Función de Seguridad (Callback) ---
 def reset_estado():
@@ -33,7 +33,7 @@ if 'docs_generados' not in st.session_state:
 default_params = {
     'longitud': 10.0, 'Ti': 100.0, 'c': 0.05, 'mv': 0.0002, 
     'h': 1.0, 'k': 1.0, 'max_U_pct': 95.0, 'intervalo_dias_curvas': 10.0, 
-    'tipo_calculo': 1, 'metodo_numerico': "Explícito (Original)"
+    'tipo_calculo': 1, 'metodo_numerico': "Explícito "
 }
 
 for key, val in default_params.items():
@@ -79,7 +79,7 @@ str_contorno = {1: "Doble Drenaje", 2: "Drenaje Superior", 3: "Drenaje Inferior"
 
 metodo_numerico = st.sidebar.radio(
     "Motor Numérico", 
-    options=["Explícito (Original)", "Implícito (Incondicionalmente Estable)"],
+    options=["Explícito ", "Implícito"],
     key='metodo_numerico', on_change=reset_estado
 )
 
@@ -104,7 +104,7 @@ with tab_simulacion:
         permeabilidad = c * mv * 10  
         alfa = c * k / (h**2)
         
-        if metodo_numerico == "Explícito (Original)" and alfa > 0.5:
+        if metodo_numerico == "Explícito " and alfa > 0.5:
             st.error(f"Error: El método explícito no es convergente para alfa={alfa:.3f} (debe ser ≤ 0.5). Reduce el incremento temporal 'k', aumenta 'h', o cambia al Método Implícito.")
             st.session_state.calculado = False
         else:
@@ -122,7 +122,7 @@ with tab_simulacion:
             progreso = st.progress(0)
 
             # --- MOTOR IMPLÍCITO ---
-            if metodo_numerico == "Implícito (Incondicionalmente Estable)":
+            if metodo_numerico == "Implícito ":
                 A = np.zeros((nx + 1, nx + 1))
                 for i in range(1, nx):
                     A[i, i-1] = -alfa
@@ -393,7 +393,7 @@ with tab_teoria:
     de volumen en los suelos de grano fino saturados, traduciéndose en asientos en la superficie.
     """)
 
-    st.subheader("1. La Ecuación Diferencial Gobernadora")
+    st.subheader("1. Ecuación Diferencial del modelo")
     st.write("""
     Partiendo de las leyes de flujo continuo de Darcy y la conservación de masa, Terzaghi dedujo la siguiente ecuación 
     diferencial en derivadas parciales (EDP) parabólica:
@@ -466,7 +466,7 @@ with tab_teoria:
     st.success("✅ **Incondicionalmente Estable:** Este método invierte la matriz $[A]$ en cada paso. Aunque consume ligeramente más memoria, permite dar pasos de tiempo $k$ gigantescos sin que el modelo colapse jamás, siendo ideal para consolidaciones a largo plazo.")
 
     st.markdown("---")
-    st.subheader("4. Cálculo Físico Final (Grado de Consolidación y Asientos)")
+    st.subheader("4. Cálculo Final (Grado de Consolidación y Asientos)")
     st.write("""
     A medida que la presión intersticial $u$ disminuye transfiriendo la carga al esqueleto sólido, el suelo se comprime. 
     El grado de consolidación medio del estrato en un instante de tiempo, **$U(t)$**, se calcula integrando el área bajo 
