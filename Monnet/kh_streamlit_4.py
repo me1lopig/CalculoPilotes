@@ -5,49 +5,46 @@ import math
 import matplotlib.pyplot as plt
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Geotecnia Pro: Chadeisson Auditor", layout="wide")
+st.set_page_config(page_title="Geotecnia Pro: Chadeisson Empírico", layout="wide")
 
 # --- CONSTANTES DE CONVERSIÓN ---
 KPA_TO_TM2 = 1.0 / 9.80665
 TM3_TO_KNM3 = 9.80665
 
 # =====================================================================
-# DATOS EMPÍRICOS (Digitalización Vectorial Exacta del Usuario)
+# DATOS EMPÍRICOS EXACTOS (Extraídos por el usuario)
 # =====================================================================
-# A partir de estos puntos se calculan automáticamente las ecuaciones m y n
-# ajustable con los datos de la grafica de Chadeisson
-
 datos_usuario = [
-    {'Kh': 700,   'c1': 0, 'phi1': 7.0, 'c2': 1.64, 'phi2': 0.0},
-    {'Kh': 800,   'c1': 0, 'phi1': 10.0, 'c2': 2.47, 'phi2': 0.0},
-    {'Kh': 900,   'c1': 0, 'phi1': 12.0, 'c2': 3.19, 'phi2': 0.0},
-    {'Kh': 1000,  'c1': 0, 'phi1': 14.0, 'c2': 4.0, 'phi2': 0.0},
-    {'Kh': 1200,  'c1': 0, 'phi1': 18.0, 'c2': 5.69, 'phi2': 0.0},
-    {'Kh': 1300,  'c1': 0, 'phi1': 19.2, 'c2': 6.46, 'phi2': 0.0},
-    {'Kh': 1400,  'c1': 0, 'phi1': 20.0, 'c2': 7.29, 'phi2': 0.0},
-    {'Kh': 1500,  'c1': 0, 'phi1': 21.5, 'c2': 8.0, 'phi2': 0.0},
-    {'Kh': 2000,  'c1': 0, 'phi1': 26.0, 'c2': 9.0, 'phi2': 7.0},
-    {'Kh': 3000,  'c1': 0, 'phi1': 31.5, 'c2': 9.0, 'phi2': 18.0},
-    {'Kh': 4000,  'c1': 0, 'phi1': 35.0, 'c2': 9.0, 'phi2': 24.74},
-    {'Kh': 5000,  'c1': 0, 'phi1': 38.0, 'c2': 9.0, 'phi2': 28.4},
-    {'Kh': 6000,  'c1': 0, 'phi1': 40.0, 'c2': 9.0, 'phi2': 31.5},
-    {'Kh': 7000,  'c1': 0, 'phi1': 41.5, 'c2': 9.0, 'phi2': 34.0},
-    {'Kh': 8000,  'c1': 0, 'phi1': 43.0, 'c2': 9.0, 'phi2': 36.0},
-    {'Kh': 9000,  'c1': 0, 'phi1': 44.0, 'c2': 9.0, 'phi2': 38.0},
-    {'Kh': 10000, 'c1': 0, 'phi1': 45.0, 'c2': 9.0, 'phi2': 39.2},
-    {'Kh': 12000, 'c1': 3.17,'phi1': 45.0, 'c2': 9.0, 'phi2': 41.5},
-    {'Kh': 14000, 'c1': 6, 'phi1': 45.0, 'c2': 9.0, 'phi2': 43.2},
-    {'Kh': 16000, 'c1': 8.38, 'phi1': 46, 'c2': 9.0, 'phi2': 45.0}
+    {'Kh': 700,   'c1': 0,    'phi1': 7.0,  'c2': 1.64, 'phi2': 0.0},
+    {'Kh': 800,   'c1': 0,    'phi1': 10.0, 'c2': 2.47, 'phi2': 0.0},
+    {'Kh': 900,   'c1': 0,    'phi1': 12.0, 'c2': 3.19, 'phi2': 0.0},
+    {'Kh': 1000,  'c1': 0,    'phi1': 14.0, 'c2': 4.0,  'phi2': 0.0},
+    {'Kh': 1100,  'c1': 0,    'phi1': 16.0, 'c2': 4.84, 'phi2': 0.0},
+    {'Kh': 1200,  'c1': 0,    'phi1': 18.0, 'c2': 5.69, 'phi2': 0.0},
+    {'Kh': 1300,  'c1': 0,    'phi1': 19.2, 'c2': 6.46, 'phi2': 0.0},
+    {'Kh': 1400,  'c1': 0,    'phi1': 20.0, 'c2': 7.29, 'phi2': 0.0},
+    {'Kh': 1500,  'c1': 0,    'phi1': 21.5, 'c2': 8.0,  'phi2': 0.0},
+    {'Kh': 2000,  'c1': 0,    'phi1': 26.0, 'c2': 9.0,  'phi2': 7.0},
+    {'Kh': 3000,  'c1': 0,    'phi1': 31.5, 'c2': 9.0,  'phi2': 18.0},
+    {'Kh': 4000,  'c1': 0,    'phi1': 35.0, 'c2': 9.0,  'phi2': 24.74},
+    {'Kh': 5000,  'c1': 0,    'phi1': 38.0, 'c2': 9.0,  'phi2': 28.4},
+    {'Kh': 6000,  'c1': 0,    'phi1': 40.0, 'c2': 9.0,  'phi2': 31.5},
+    {'Kh': 7000,  'c1': 0,    'phi1': 41.5, 'c2': 9.0,  'phi2': 34.0},
+    {'Kh': 8000,  'c1': 0,    'phi1': 43.0, 'c2': 9.0,  'phi2': 36.0},
+    {'Kh': 9000,  'c1': 0,    'phi1': 44.0, 'c2': 9.0,  'phi2': 38.0},
+    {'Kh': 10000, 'c1': 0,    'phi1': 45.0, 'c2': 9.0,  'phi2': 39.2},
+    {'Kh': 12000, 'c1': 3.17, 'phi1': 45.0, 'c2': 9.0,  'phi2': 41.5},
+    {'Kh': 14000, 'c1': 6.0,  'phi1': 45.0, 'c2': 9.0,  'phi2': 43.2},
+    {'Kh': 16000, 'c1': 8.38, 'phi1': 46.0, 'c2': 9.0,  'phi2': 45.0}
 ]
 
-# Generador automático de ecuaciones de las rectas
+# Generador automático de ecuaciones (m: pendiente, n: ordenada origen)
 rectas_chadeisson_empiricas = {}
 for fila in datos_usuario:
     kh = fila['Kh']
-    # m = (y2 - y1) / (x2 - x1)
     m = (fila['phi2'] - fila['phi1']) / (fila['c2'] - fila['c1'])
-    # n = y1 - m*x1 (como x1 siempre es 0 en tus datos, n = phi1)
-    n = fila['phi1'] 
+    # Ahora n se calcula correctamente aunque c1 no sea cero
+    n = fila['phi1'] - (m * fila['c1'])
     rectas_chadeisson_empiricas[kh] = (m, n)
 
 
@@ -75,7 +72,7 @@ def calc_chadeisson_granados(phi_d, c_kpa):
     return calc_chadeisson_granados_tm3(phi_d, c_kpa * KPA_TO_TM2) * TM3_TO_KNM3
 
 # =====================================================================
-# MÉTODO 2: GEOMÉTRICO EMPÍRICO (A partir del CSV)
+# MÉTODO 2: GEOMÉTRICO EMPÍRICO (Interpolación de Rectas Reales)
 # =====================================================================
 def calc_chadeisson_geometrico_tm3(phi_d, c_tm2):
     alturas_phi = []
@@ -85,8 +82,8 @@ def calc_chadeisson_geometrico_tm3(phi_d, c_tm2):
         
     alturas_phi.sort()
     
-    if phi_d < alturas_phi[0][0]: return 0.0 # Fuera de rango inferior
-    if phi_d >= alturas_phi[-1][0]: return alturas_phi[-1][1] # Tope superior
+    if phi_d < alturas_phi[0][0]: return 0.0
+    if phi_d >= alturas_phi[-1][0]: return alturas_phi[-1][1]
         
     for i in range(len(alturas_phi) - 1):
         phi_inf, kh_inf = alturas_phi[i]
@@ -106,12 +103,12 @@ def calc_chadeisson_geometrico(phi_d, c_kpa):
 # =====================================================================
 # INTERFAZ STREAMLIT
 # =====================================================================
-st.title("🧮 Calculadora de Balasto Horizontal (Motor Empírico)")
+st.title("🧮 Calculadora de Balasto (Motor Empírico)")
 
 tab_calc, tab_abacos = st.tabs(["📝 Tabla de Cálculo y Auditoría", "📊 Proyección Visual (φ máx = 45°)"])
 
 with tab_calc:
-    st.markdown("Calculadora basada en la digitalización empírica de las rectas frente a la regresión matemática.")
+    st.markdown("Calculadora basada en tu digitalización empírica de las rectas, enfrentada al modelo de regresión de Granados.")
     
     df_init = pd.DataFrame([
         {"Estrato": "Arcilla blanda", "phi [°]": 5.0, "c [kPa]": 15.0},
@@ -133,6 +130,7 @@ with tab_calc:
     if not df_input.empty:
         df_input['kh Granados'] = df_input.apply(lambda r: calc_chadeisson_granados(r['phi [°]'], r['c [kPa]']), axis=1)
         df_input['kh Geométrico'] = df_input.apply(lambda r: calc_chadeisson_geometrico(r['phi [°]'], r['c [kPa]']), axis=1)
+        
         df_input['Desviación (%)'] = np.where(
             df_input['kh Geométrico'] > 0,
             abs(df_input['kh Granados'] - df_input['kh Geométrico']) / df_input['kh Geométrico'] * 100, 
@@ -151,13 +149,12 @@ with tab_calc:
 with tab_abacos:
     st.subheader("Comparativa Visual Directa")
     
-    # Lienzos ajustados para ser elegantes y proporcionados
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 6))
     niveles_completos = list(rectas_chadeisson_empiricas.keys())
     
-    # Malla matemática cortada a 45 grados
-    c_vals = np.linspace(0, 9, 200)
-    phi_vals = np.linspace(0, 45, 200)
+    # Malla matemática cortada a 45 grados (alta resolución para el renderizado suave)
+    c_vals = np.linspace(0, 9, 250)
+    phi_vals = np.linspace(0, 45, 250)
     C_grid, Phi_grid = np.meshgrid(c_vals, phi_vals)
     
     # --- GRÁFICO 1: GRANADOS ---
@@ -170,7 +167,7 @@ with tab_abacos:
     ax1.clabel(contornos_g, inline=True, fontsize=7, fmt='%1.0f')
     ax1.set_title("Modelo Granados (Polinomio Grado 5)", fontweight='bold', fontsize=10)
     
-    # --- GRÁFICO 2: GEOMÉTRICO (Basado 100% en el CSV del usuario) ---
+    # --- GRÁFICO 2: GEOMÉTRICO (Basado 100% en los puntos del usuario) ---
     Kh_grid_geom = np.zeros_like(C_grid)
     for i in range(C_grid.shape[0]):
         for j in range(C_grid.shape[1]):
@@ -178,16 +175,15 @@ with tab_abacos:
             
     contornos_m = ax2.contour(C_grid, Phi_grid, Kh_grid_geom, levels=niveles_completos, colors='#e67e22', linewidths=1.0, alpha=0.9)
     ax2.clabel(contornos_m, inline=True, fontsize=7, fmt='%1.0f')
-    ax2.set_title("Modelo Geométrico Empírico (Puntos Directos)", fontweight='bold', fontsize=10)
+    ax2.set_title("Modelo Geométrico Empírico (Tus Datos)", fontweight='bold', fontsize=10)
     
     # --- FORMATO COMÚN ---
     for ax in [ax1, ax2]:
         ax.set_xlim(0, 9)
-        ax.set_ylim(0, 45) # Techo inamovible
+        ax.set_ylim(0, 45) # Techo estricto a 45
         ax.set_xticks(np.arange(0, 10, 1))
         ax.set_yticks(np.arange(0, 50, 5))
         
-        # Cuadrícula fina
         ax.xaxis.grid(True, linestyle='-', color='#e0e0e0', linewidth=0.5)
         ax.yaxis.grid(True, linestyle='--', color='#e0e0e0', linewidth=0.5)
         
@@ -195,12 +191,12 @@ with tab_abacos:
         ax.set_ylabel('Degrés (φ)', fontsize=9)
         ax.tick_params(axis='both', which='major', labelsize=8)
         
-        # Extraer el punto de corte con X de la recta de 700 para la zona de exclusión
+        # Calcular dinámicamente el triángulo de exclusión (basado en la recta 700)
         m_700, n_700 = rectas_chadeisson_empiricas[700]
-        corte_x = -n_700 / m_700 # Donde la recta 700 toca y=0
+        corte_x = -n_700 / m_700 
         ax.add_patch(plt.Polygon([[0,0], [corte_x, 0], [0, n_700]], color='gray', alpha=0.15, hatch='///'))
         
-        # Superposición de puntos de la tabla
+        # Pintar los puntos de entrada de la tabla
         if not df_input.empty:
             for _, row in df_input.iterrows():
                 phi_p = row['phi [°]']
