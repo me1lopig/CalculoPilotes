@@ -5,21 +5,21 @@ import math
 import matplotlib.pyplot as plt
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Geotecnia Pro: Chadeisson Empírico", layout="wide")
+st.set_page_config(page_title="Estimación de Kh Ábaco de Chadeisson", layout="wide")
 
 # --- CONSTANTES DE CONVERSIÓN ---
 KPA_TO_TM2 = 1.0 / 9.80665
 TM3_TO_KNM3 = 9.80665
 
 # =====================================================================
-# DATOS EMPÍRICOS EXACTOS (Matriz actualizada con Kh=1100)
+# Puntos de las rectas del ábaco
 # =====================================================================
 datos_usuario = [
     {'Kh': 700,   'c1': 0,    'phi1': 7.0,  'c2': 1.64, 'phi2': 0.0},
     {'Kh': 800,   'c1': 0,    'phi1': 10.0, 'c2': 2.47, 'phi2': 0.0},
     {'Kh': 900,   'c1': 0,    'phi1': 12.0, 'c2': 3.19, 'phi2': 0.0},
     {'Kh': 1000,  'c1': 0,    'phi1': 14.0, 'c2': 4.0,  'phi2': 0.0},
-    {'Kh': 1100,  'c1': 0,    'phi1': 16.0, 'c2': 4.84, 'phi2': 0.0}, # <--- NUEVA RECTA AÑADIDA
+    {'Kh': 1100,  'c1': 0,    'phi1': 16.0, 'c2': 4.84, 'phi2': 0.0},
     {'Kh': 1200,  'c1': 0,    'phi1': 18.0, 'c2': 5.69, 'phi2': 0.0},
     {'Kh': 1300,  'c1': 0,    'phi1': 19.2, 'c2': 6.46, 'phi2': 0.0},
     {'Kh': 1400,  'c1': 0,    'phi1': 20.0, 'c2': 7.29, 'phi2': 0.0},
@@ -48,7 +48,7 @@ for fila in datos_usuario:
 
 
 # =====================================================================
-# MÉTODO 1: POLINOMIO DE GRANADOS (Auditor Matemático)
+# MÉTODO 1: POLINOMIO DE GRANADOS
 # =====================================================================
 def calc_chadeisson_granados_tm3(phi_d, c_tm2):
     phi_rad = math.radians(phi_d)
@@ -105,18 +105,17 @@ def calc_chadeisson_geometrico(phi_d, c_kpa):
 # =====================================================================
 # INTERFAZ STREAMLIT
 # =====================================================================
-st.title("🧮 Calculadora de Balasto Horizontal (Motor Empírico)")
+st.title("🧮 Calculadora de kh)")
 
-tab_calc, tab_abacos = st.tabs(["📝 Tabla de Cálculo y Auditoría", "📊 Proyección Visual (φ máx = 45°)"])
+tab_calc, tab_abacos = st.tabs(["📝 Tabla de Cálculo ", "📊 Gráfica"])
 
 with tab_calc:
-    st.markdown("Calculadora basada en tu digitalización empírica de las rectas, enfrentada al modelo de regresión de Granados.")
+    st.markdown("Calculadora basada en el método de Granados y en el método ITQ.")
     
     df_init = pd.DataFrame([
-        {"Estrato": "Fango superficial", "phi [°]": 2.0, "c [kPa]": 5.0}, # Para probar la alerta
-        {"Estrato": "Arcilla firme", "phi [°]": 15.0, "c [kPa]": 30.0},
-        {"Estrato": "Arena compacta", "phi [°]": 35.0, "c [kPa]": 0.0},
-        {"Estrato": "Terreno rocoso", "phi [°]": 45.0, "c [kPa]": 9.0/KPA_TO_TM2}
+        {"Estrato": "UG-01", "phi [°]": 15.0, "c [kPa]": 30.0},
+        {"Estrato": "UG-02", "phi [°]": 35.0, "c [kPa]": 0.0},
+        {"Estrato": "UG-03", "phi [°]": 45.0, "c [kPa]": 25.5}
     ])
 
     df_input = st.data_editor(
@@ -151,7 +150,7 @@ with tab_calc:
         )
 
 with tab_abacos:
-    st.subheader("Comparativa Visual Directa")
+    st.subheader("Comparativa de resultados")
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 6))
     niveles_completos = list(rectas_chadeisson_empiricas.keys())
@@ -191,8 +190,8 @@ with tab_abacos:
         ax.xaxis.grid(True, linestyle='-', color='#e0e0e0', linewidth=0.5)
         ax.yaxis.grid(True, linestyle='--', color='#e0e0e0', linewidth=0.5)
         
-        ax.set_xlabel('C (t/m²) (cohésion)', fontsize=9)
-        ax.set_ylabel('Degrés (φ)', fontsize=9)
+        ax.set_xlabel('C (t/m²) (cohesion)', fontsize=9)
+        ax.set_ylabel('Ángulo de rozamiento (φ)', fontsize=9)
         ax.tick_params(axis='both', which='major', labelsize=8)
         
         # Calcular dinámicamente el triángulo de exclusión (Fango) basado en tu recta 700
