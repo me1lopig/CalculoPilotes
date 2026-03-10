@@ -38,7 +38,15 @@ LIMITES = {
     }
 }
 
-# --- DATOS DE SECCIONES (INCRUSTADOS) ---
+# --- DATOS DE SECCIONES Y MATERIALES (INCRUSTADOS) ---
+
+DATA_DIAMETROS = """Dp de Perforación (mm);D del Micropilote (mm);de de la Armadura Tubular (mm) (*)
+120;114,3;60,3 - 73,0
+140;133,0;60,3 - 73,0 - 88,9
+160;152,4;73,0 - 88,9 - 101,6
+185;177,8;88,9 - 101,6 - 114,3 - 127,0
+200;193,7;101,6 - 114,3 - 127,0 - 139,0
+225;219,1;114,3 - 127,0 - 139,0 - 168,3"""
 
 DATA_ACEROS = """EN 10025;API 5CT;Límite elástico min (N/mm2);Resistencia a tracción (N/mm2);Alargamiento min (%)
 S235;-;235;340-470;26
@@ -278,6 +286,14 @@ with tab1:
 # PESTAÑA 2: SECCIONES Y MATERIALES
 # ==========================================
 with tab2:
+    st.subheader("🕳️ Diámetros Habituales de Perforación y Armadura")
+    st.markdown("Relación entre el diámetro de perforación ($D_P$), el diámetro final del micropilote ($D$) y los diámetros exteriores de la armadura tubular ($d_e$).")
+    df_diametros = pd.read_csv(StringIO(DATA_DIAMETROS), sep=";")
+    st.dataframe(df_diametros, use_container_width=True, hide_index=True)
+    st.caption("(*) El valor mayor de cada una de las filas de diámetros exteriores de armadura tubular $d_e$, será válido únicamente en uniones roscadas.")
+
+    st.divider()
+
     st.subheader("🛠️ Tipos de Acero más Habituales")
     st.markdown("Consulta las propiedades mecánicas de los aceros estructurales y de entubación (API 5CT).")
     

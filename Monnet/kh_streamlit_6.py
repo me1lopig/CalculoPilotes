@@ -1,3 +1,17 @@
+# calculadora de Kh 
+# Ábaco de Chadeisson
+# Método de Granados https://share.google/VcqCQNKYtkJAQnOXR
+# Método de iterpolación mediante las lineas del ábaco
+
+# Desarrollado por Germán López Pineda
+# ICCP, MIT y MMC
+# Bajo criterios del ITQ
+
+
+
+
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,6 +27,17 @@ st.set_page_config(page_title="Estimación de Kh Ábaco de Chadeisson", layout="
 # --- CONSTANTES DE CONVERSIÓN ---
 KPA_TO_TM2 = 1.0 / 9.80665
 TM3_TO_KNM3 = 9.80665
+
+# --- FUNCIONES DE FORMATO ESPAÑOL (Punto para miles, Coma para decimales) ---
+def formato_espanol(x):
+    """Convierte un número a formato 15.000,00"""
+    return f"{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def formato_porcentaje_es(x):
+    """Convierte un porcentaje a formato 15,00%"""
+    if x == 0: return "-"
+    return f"{x:.2f}".replace(".", ",") + "%"
+
 
 # =====================================================================
 # Puntos de las rectas del ábaco (Datos Empíricos)
@@ -112,14 +137,15 @@ def formatear_ejes(ax, df_input):
 def dibujar_granados(ax, df_input):
     contornos_g = ax.contour(C_grid, Phi_grid, Kh_grid_granados, levels=niveles_completos, colors='#2b59c3', linewidths=1.0, alpha=0.8)
     ax.clabel(contornos_g, inline=True, fontsize=7, fmt='%1.0f')
-    ax.set_title("Modelo Granados (Polinomio Grado 5)", fontweight='bold', fontsize=10)
+    ax.set_title("Modelo Granados ", fontweight='bold', fontsize=10)
     formatear_ejes(ax, df_input)
 
 def dibujar_geometrico(ax, df_input):
     contornos_m = ax.contour(C_grid, Phi_grid, Kh_grid_geom, levels=niveles_completos, colors='#e67e22', linewidths=1.0, alpha=0.9)
     ax.clabel(contornos_m, inline=True, fontsize=7, fmt='%1.0f')
-    ax.set_title("Modelo Geométrico Empírico (Tus Datos)", fontweight='bold', fontsize=10)
+    ax.set_title("Modelo Geométrico Empírico", fontweight='bold', fontsize=10)
     formatear_ejes(ax, df_input)
+
 
 # =====================================================================
 # INTERFAZ STREAMLIT
@@ -134,7 +160,7 @@ with tab_calc:
     df_init = pd.DataFrame([
         {"Estrato": "UG-01", "phi [°]": 15.0, "c [kPa]": 30.0},
         {"Estrato": "UG-02", "phi [°]": 35.0, "c [kPa]": 0.0},
-        {"Estrato": "UG-03", "phi [°]": 45.0, "c [kPa]": 25.5}
+        {"Estrato": "UG-03", "phi [°]": 20.0, "c [kPa]": 18}
     ])
 
     df_input = st.data_editor(
@@ -152,11 +178,14 @@ with tab_calc:
         
         df_input['Desviación (%)'] = np.where(df_input['kh Geométrico [kN/m³]'] > 0, abs(df_input['kh Granados [kN/m³]'] - df_input['kh Geométrico [kN/m³]']) / df_input['kh Geométrico [kN/m³]'] * 100, 0.0)
         
+        # --- TABLA EN STREAMLIT: APLICANDO FORMATO ESPAÑOL A TODAS LAS COLUMNAS ---
         st.dataframe(
             df_input.style.format({
-                'kh Granados [kN/m³]': lambda x: "⚠️ Suelos muy blandos" if x < 1 else f"{x:,.2f}", 
-                'kh Geométrico [kN/m³]': lambda x: "⚠️ Suelos muy blandos" if x == 0 else f"{x:,.2f}", 
-                'Desviación (%)': lambda x: "-" if x == 0 else f"{x:.2f}%"
+                'phi [°]': formato_espanol,
+                'c [kPa]': formato_espanol,
+                'kh Granados [kN/m³]': lambda x: "⚠️ Suelos muy blandos" if x < 1 else formato_espanol(x), 
+                'kh Geométrico [kN/m³]': lambda x: "⚠️ Suelos muy blandos" if x == 0 else formato_espanol(x), 
+                'Desviación (%)': formato_porcentaje_es
             }).background_gradient(subset=['Desviación (%)'], cmap='OrRd', vmin=0, vmax=15), 
             use_container_width=True
         )
@@ -165,25 +194,22 @@ with tab_calc:
         st.markdown("---")
         st.subheader("📄 Exportar Resultados")
         
-        # Usamos st.download_button con un callback para no bloquear la app
-        if st.button("Preparar Informe Word (.docx)"):
+        if st.button("Preparar Informe Word (.docx)", type="primary"):
             with st.spinner("Compilando documento Word..."):
-                # Crear documento Word
                 doc = Document()
-                doc.add_heading('Informe Geotécnico: Estimación de Kh (Ábaco de Chadeisson)', 0)
+                doc.add_heading('Estimación de Kh (Ábaco de Chadeisson)', 0)
                 
                 # 1. Añadir Tabla
                 doc.add_heading('1. Datos de Entrada y Valores Resumen', level=1)
                 
-                # Formatear el dataframe para que luzca bien en Word (textos limpios)
+                # Preparamos el DataFrame para Word aplicando las funciones de formato español
                 df_report = df_input.copy()
-                df_report['phi [°]'] = df_report['phi [°]'].apply(lambda x: f"{x:.2f}")
-                df_report['c [kPa]'] = df_report['c [kPa]'].apply(lambda x: f"{x:.2f}")
-                df_report['kh Granados [kN/m³]'] = df_report['kh Granados [kN/m³]'].apply(lambda x: "Suelo muy blando" if x < 1 else f"{x:,.2f}")
-                df_report['kh Geométrico [kN/m³]'] = df_report['kh Geométrico [kN/m³]'].apply(lambda x: "Suelo muy blando" if x == 0 else f"{x:,.2f}")
-                df_report['Desviación (%)'] = df_report['Desviación (%)'].apply(lambda x: "-" if x == 0 else f"{x:.2f}%")
+                df_report['phi [°]'] = df_report['phi [°]'].apply(formato_espanol)
+                df_report['c [kPa]'] = df_report['c [kPa]'].apply(formato_espanol)
+                df_report['kh Granados [kN/m³]'] = df_report['kh Granados [kN/m³]'].apply(lambda x: "Suelo muy blando" if x < 1 else formato_espanol(x))
+                df_report['kh Geométrico [kN/m³]'] = df_report['kh Geométrico [kN/m³]'].apply(lambda x: "Suelo muy blando" if x == 0 else formato_espanol(x))
+                df_report['Desviación (%)'] = df_report['Desviación (%)'].apply(formato_porcentaje_es)
                 
-                # Insertar tabla en Word
                 t = doc.add_table(rows=1, cols=len(df_report.columns))
                 t.style = 'Table Grid'
                 hdr_cells = t.rows[0].cells
@@ -197,8 +223,7 @@ with tab_calc:
                 # 2. Añadir Gráficas Individuales
                 doc.add_heading('2. Gráficas Individuales', level=1)
                 
-                # Gráfica Granados
-                fig_g, ax_g = plt.subplots(figsize=(7, 5))
+                fig_g, ax_g = plt.subplots(figsize=(7, 7))
                 dibujar_granados(ax_g, df_input)
                 buf_g = BytesIO()
                 fig_g.savefig(buf_g, format='png', bbox_inches='tight', dpi=150)
@@ -206,8 +231,7 @@ with tab_calc:
                 doc.add_picture(buf_g, width=Inches(5.5))
                 doc.add_paragraph("Figura 1. Interpolación mediante Polinomio de Granados.")
                 
-                # Gráfica Geométrico
-                fig_m, ax_m = plt.subplots(figsize=(7, 5))
+                fig_m, ax_m = plt.subplots(figsize=(7, 7))
                 dibujar_geometrico(ax_m, df_input)
                 buf_m = BytesIO()
                 fig_m.savefig(buf_m, format='png', bbox_inches='tight', dpi=150)
@@ -217,7 +241,7 @@ with tab_calc:
                 
                 # 3. Añadir Gráfica Conjunta
                 doc.add_heading('3. Comparativa Conjunta', level=1)
-                fig_j, (ax_j1, ax_j2) = plt.subplots(1, 2, figsize=(10, 5))
+                fig_j, (ax_j1, ax_j2) = plt.subplots(1, 2, figsize=(10, 6))
                 dibujar_granados(ax_j1, df_input)
                 dibujar_geometrico(ax_j2, df_input)
                 buf_j = BytesIO()
@@ -226,25 +250,23 @@ with tab_calc:
                 doc.add_picture(buf_j, width=Inches(6.0))
                 doc.add_paragraph("Figura 3. Comparativa visual de ambos métodos.")
                 
-                # Guardar documento en memoria
                 doc_io = BytesIO()
                 doc.save(doc_io)
                 doc_io.seek(0)
                 
-                plt.close('all') # Limpiar memoria de gráficas
+                plt.close('all')
                 
-                # Descargar
                 st.success("¡Informe preparado con éxito!")
                 st.download_button(
                     label="📥 Descargar Informe en Word (.docx)",
                     data=doc_io,
-                    file_name="Informe_Geotecnico_Chadeisson.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    file_name="Informe_Chadeisson.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    type="primary"
                 )
 
 with tab_abacos:
     st.subheader("Comparativa de resultados")
-    # Gráficas en pantalla más compactas (8x4.5)
     fig_pantalla, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4.5))
     
     dibujar_granados(ax1, df_input)
