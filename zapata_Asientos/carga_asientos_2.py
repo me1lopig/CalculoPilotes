@@ -378,6 +378,7 @@ modo = st.sidebar.radio("Vista:", [
     "🧮 Panel de Resultados",
     "📋 Detalle Capas Escalas",
     "📉 Bulbo Límite",
+    "📖 Fundamento Teórico y Algoritmo",
 ])
 
 st.sidebar.markdown("---")
@@ -392,21 +393,33 @@ if L < B:
     B, L = L, B
     st.sidebar.warning("⚠️ L<B: valores intercambiados automáticamente.")
 
+# Calculamos el espesor total de los estratos definidos en la tabla actual
+espesor_total = float(pd.to_numeric(st.session_state.df_terreno["Espesor (m)"]).sum())
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("📐 Geometría de Integración")
 
-# NUEVO DESPLEGABLE PARA ELEGIR EL MULTIPLICADOR DEL BULBO
 factor_bulbo = st.sidebar.selectbox(
     "Profundidad del bulbo activo",
     options=[1.5, 2.0],
     format_func=lambda x: f"{x}B",
     on_change=reset_calculo,
-    help="Define el espesor del terreno sobre el que se integrarán las deformaciones. 1.5B es habitual para zapatas aisladas."
+    help="Define el espesor del terreno sobre el que se integrarán las deformaciones."
 )
 
 # Determinamos profundidad estática basada en la selección
 z_max_calc = factor_bulbo * min(B, L)
-st.sidebar.success(f"💡 **Bulbo fijado en {factor_bulbo}B = {z_max_calc:.2f} m**")
+
+# ALERTA CRÍTICA SI EL BULBO SUPERA LOS ESTRATOS
+if z_max_calc > espesor_total:
+    st.sidebar.error(
+        f"🚨 **¡ALERTA GEOTÉCNICA!**\n\n"
+        f"El bulbo de integración (**{z_max_calc:.2f} m**) supera la profundidad total de los "
+        f"estratos definidos (**{espesor_total:.2f} m**).\n\n"
+        f"**Añade más espesor en la tabla de terreno.**"
+    )
+else:
+    st.sidebar.success(f"💡 **Bulbo fijado en {factor_bulbo}B = {z_max_calc:.2f} m**\n\n*(Terreno disponible: {espesor_total:.2f} m)*")
 
 dz_sub = st.sidebar.select_slider(
     "Tamaño de subcapa elástica (dz) [m]",
@@ -450,7 +463,7 @@ if st.sidebar.button("🚀 Calcular Presión Admisible", type="primary", use_con
     st.session_state.df_ec    = df_ec
     st.session_state.dz_used  = dz_sub
     st.session_state.z_max_calc = z_max_calc
-    st.session_state.factor_bulbo = factor_bulbo # Guardamos el factor seleccionado
+    st.session_state.factor_bulbo = factor_bulbo 
     st.session_state.calculo_realizado = True
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -465,11 +478,9 @@ if st.session_state.calculo_realizado:
     z_max    = st.session_state.z_max_calc
     factor_b = st.session_state.factor_bulbo
 
-    # Usamos la presión más conservadora (la menor) para graficar el bulbo límite
     p_plot = min(p_adm_st, p_adm_ec)
 
-    # Figura bulbo
-    z_vals = np.linspace(0.05, z_max * 1.5, 200) # Dibujamos un poco más abajo del límite
+    z_vals = np.linspace(0.05, z_max * 1.5, 200) 
     sz_v,sx_v,sy_v,sv0_v = [],[],[],[]
     for z in z_vals:
         sz,sx,sy = holl_centro(p_plot, B, L, z)
@@ -542,6 +553,11 @@ if modo == "🧮 Panel de Resultados":
     if not st.session_state.calculo_realizado:
         st.info("👈 Introduce el Asiento Límite y pulsa **Calcular** en el panel izquierdo.")
     else:
+        # AVISO EN RESULTADOS SI HAY TRUNCAMIENTO
+        espesor_total = float(pd.to_numeric(st.session_state.df_terreno["Espesor (m)"]).sum())
+        if st.session_state.z_max_calc > espesor_total:
+            st.error(f"⛔ **CÁLCULO INSEGURO:** El bulbo requería integrar hasta **{st.session_state.z_max_calc:.2f} m**, pero se ha truncado a **{espesor_total:.2f} m** por falta de estratos. Las presiones admisibles mostradas a continuación están SOBREESTIMADAS y no son válidas.")
+
         p_st = st.session_state.p_adm_st
         p_ec = st.session_state.p_adm_ec
 
@@ -570,7 +586,7 @@ elif modo == "📋 Detalle Capas Escalas":
         st.subheader("🔵 Método de Steinbrenner")
         st.dataframe(st.session_state.df_st.round(4), use_container_width=True, hide_index=True)
         
-        st.subheader("🟢 Ecuación Elástica (Ec. 68)")
+        st.subheader("🟢 Ecuación Elástica (Ec. Elástica)")
         st.dataframe(st.session_state.df_ec.round(4), use_container_width=True, hide_index=True)
 
 elif modo == "📉 Bulbo Límite":
@@ -614,3 +630,49 @@ elif modo == "📉 Bulbo Límite":
             ax.grid(True, linestyle=':', alpha=0.5)
             ax.spines[['top','right']].set_visible(False)
             st.pyplot(fig); plt.close(fig)
+
+elif modo == "📖 Fundamento Teórico y Algoritmo":
+    st.header("Fundamento Teórico y Algoritmo de Diseño")
+
+    st.subheader("1. Algoritmo de Cálculo Inverso (Escalado Lineal Directo)")
+    st.markdown(
+        "Dado que se asume un comportamiento **elástico lineal** del terreno y se fija la "
+        "profundidad de integración a una geometría constante (ej. 1.5B o 2.0B), el asiento resultante es "
+        "directamente proporcional a la presión aplicada. El algoritmo de diseño aprovecha esta linealidad:"
+    )
+    st.markdown("1. Se aplica una presión ficticia de referencia internamente ($p_{ref} = 100$ kPa).")
+    st.markdown("2. Se calcula el asiento de referencia ($s_{ref}$) generado por esa presión en la profundidad de bulbo estipulada.")
+    st.markdown("3. Se obtiene la presión neta admisible ($p_{adm}$) aplicando una proporción exacta con el asiento límite fijado por el usuario ($s_{adm}$):")
+    st.latex(r"p_{adm} = p_{ref} \cdot \frac{s_{adm}}{s_{ref}}")
+
+    st.markdown("---")
+    
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        st.subheader("🔵 Método 1 — Steinbrenner")
+        st.markdown("Integración analítica del campo de asientos usando los factores geométricos φ₁ y φ₂:")
+        st.latex(r"s(z) = \frac{p \cdot B}{E}\left[(1-\nu^2)\phi_1 - (1-\nu-2\nu^2)\phi_2\right]")
+        st.latex(r"\phi_1 = \frac{1}{\pi}\left[\ln\frac{\sqrt{1+m^2+n^2}+n}{\sqrt{1+m^2}} + n\ln\frac{\sqrt{1+m^2+n^2}+1}{\sqrt{n^2+m^2}}\right]")
+        st.latex(r"\phi_2 = \frac{m}{\pi}\arctan\frac{n}{m\sqrt{1+m^2+n^2}}")
+        st.markdown(r"Con $n = L/B$ y $m = z/B_{cuadrante}$. El asiento elástico de cada estrato se evalúa como la diferencia entre la base y el techo:")
+        st.latex(r"\Delta s_i = s(z_{techo}) - s(z_{base})")
+
+    with col_b:
+        st.subheader("🟢 Método 2 — Ecuación Elástica")
+        st.markdown("Integración numérica explícita de la deformación unitaria vertical en cada estrato:")
+        st.latex(r"s = \sum_{i=1}^{n}\left[\frac{h}{E}\left(\Delta\sigma_z - \nu(\Delta\sigma_x+\Delta\sigma_y)\right)\right]_i")
+        st.markdown(r"Las tensiones se evalúan en el **punto medio** de cada subcapa ($z_{mid}$):")
+        st.latex(r"\Delta\varepsilon_z = \frac{\Delta\sigma_z - \nu(\Delta\sigma_x+\Delta\sigma_y)}{E}")
+        st.latex(r"\Delta s_i = \Delta\varepsilon_z \cdot dz")
+
+    st.markdown("---")
+    st.subheader("🔁 Tensiones de Holl — compartidas por ambos métodos")
+    st.markdown(
+        r"Ambas formulaciones usan las tensiones de Holl bajo la **esquina** de una carga rectangular, "
+        r"aplicando superposición elástica ($\times 4$) con sub-cuadrantes de $B/2 \times L/2$ para obtener el valor bajo el **centro** geométrico de la zapata:"
+    )
+    st.latex(r"\sigma_z = \frac{p}{2\pi}\left[\arctan\frac{BL}{zR_3} + BL\left(\frac{1}{R_1^2}+\frac{1}{R_2^2}\right)\frac{z}{R_3}\right]")
+    st.latex(r"\sigma_x = \frac{p}{2\pi}\left[\arctan\frac{BL}{zR_3} - \frac{BLz}{R_1^2 R_3}\right]")
+    st.latex(r"\sigma_y = \frac{p}{2\pi}\left[\arctan\frac{BL}{zR_3} - \frac{BLz}{R_2^2 R_3}\right]")
+    st.latex(r"R_1=\sqrt{L^2+z^2}\quad R_2=\sqrt{B^2+z^2}\quad R_3=\sqrt{L^2+B^2+z^2}")
