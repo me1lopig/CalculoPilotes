@@ -38,7 +38,7 @@ if 'fig_final_guardada' not in st.session_state: st.session_state.fig_final_guar
 # INTERFAZ PRINCIPAL DE PESTAÑAS 
 # ══════════════════════════════════════════════════════════════════════════
 tab_datos, tab_tensiones, tab_matriz_punta, tab_matriz_fuste, tab_matriz_total, tab_matriz_tope, tab_auditoria, tab_formulacion = st.tabs([
-    "📋 1. Estratigrafía", "🌊 2. Tensiones", "🔻 3. Punta", "🟫 4. Fuste", "🌍 5. Total", "🛑 6. Tope Estruct.", "🔍 7. Auditoría", "📖 8. Formulación"
+    "📋 1. Estratigrafía", "🌊 2. Tensiones", "🔻 3. Punta", "👖 4. Fuste", "🌍 5. Total", "🛑 6. Tope Estruct.", "🔍 7. Auditoría", "📖 8. Formulación"
 ])
 
 with tab_datos:
@@ -65,8 +65,8 @@ with tab_datos:
 
     z_max_total = df_edit["Espesor (m)"].sum()
     st.info(f"Profundidad máxima actual del sondeo: **{z_max_total:.2f} m**.")
-    st.info("ℹ️ **Nota Geotécnica:** Si la zona de influencia de la punta (3D) sobrepasa la profundidad máxima definida, el software asume que el último estrato se prolonga indefinidamente.")
-    
+    st.info("ℹ️ **Nota:** Si la zona de influencia de la punta (3D) sobrepasa la profundidad máxima definida, el software asume que el último estrato se prolonga indefinidamente.")
+    st.info("Después de cada modificación hay que pulsar el botón 'Calcular Pilotes' para actualizar los resultados.")
     if not st.session_state.calculado:
         st.warning("👈 Haz clic en **'Calcular Pilotes'** en el menú izquierdo para procesar los datos.")
 
