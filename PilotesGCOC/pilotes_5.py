@@ -12,8 +12,8 @@ from datetime import date
 
 st.set_page_config(page_title="Cálculo de Pilotes - GCOC", layout="wide", page_icon="🏗️")
 
-st.title("🏗️ Diseño de Pilotes: Método Analítico (GCOC 5.10.2.5 y 5.15.1)")
-st.markdown("Cálculo estricto según la normativa española (topes 20D, fD por diámetro, promedio de Resistencias q_p en bulbo 6D/3D y Tope Estructural).")
+st.title("🏗️ Diseño de Pilotes GCOC ")
+st.markdown("Cálculo según el método analítico).")
 
 # ══════════════════════════════════════════════════════════════════════════
 # INICIALIZACIÓN DE LA TABLA BASE 
@@ -25,7 +25,7 @@ if 'df_base' not in st.session_state:
         "Gamma Seco (kN/m3)": [18.0, 17.0, 19.0, 20.0],
         "Gamma Sat. (kN/m3)": [20.0, 18.0, 21.0, 21.0],
         "Condición": ["Largo Plazo", "Corto Plazo", "Largo Plazo", "Corto Plazo"],
-        "c o cu (kPa)": [0.0, 100.0, 0.0, 150.0],
+        "c / cu (kPa)": [0.0, 100.0, 0.0, 150.0],
         "phi (grados)": [28.0, 0.0, 35.0, 0.0]
     })
 
@@ -185,7 +185,7 @@ def calcular_pilote(D, L, df, zw, fS_val, sigma_tope_mpa):
         
         if overlap_h > 0 and espesor_bulbo > 0:
             cond_i = row["Condición"]
-            c_i = row["c o cu (kPa)"]
+            c_i = row["c / cu (kPa)"]
             phi_i = row["phi (grados)"]
             
             if "Corto Plazo" in cond_i:
@@ -255,9 +255,9 @@ def calcular_pilote(D, L, df, zw, fS_val, sigma_tope_mpa):
             sig_v_eff_mid = obtener_tension_a_profundidad(z_mid, z_vals, sig_v_eff)
             
             if "Corto Plazo" in row["Condición"]:
-                tau_f = min(row["c o cu (kPa)"] * (100.0 / (100.0 + row["c o cu (kPa)"])), 70.0)
+                tau_f = min(row["c / cu (kPa)"] * (100.0 / (100.0 + row["c / cu (kPa)"])), 70.0)
             else:
-                tau_f = min(row["c o cu (kPa)"] + k0_tan_delta_fijo * sig_v_eff_mid, 90.0)
+                tau_f = min(row["c / cu (kPa)"] + k0_tan_delta_fijo * sig_v_eff_mid, 90.0)
                 
             Q_tramo = tau_f * Perimetro * L_sub
             Q_fuste += Q_tramo
@@ -270,7 +270,7 @@ def calcular_pilote(D, L, df, zw, fS_val, sigma_tope_mpa):
             auditoria_fuste.append({
                 "Estrato": row["Estrato"] + sufijo,
                 "Cotas (m)": f"{z_sub_top:.1f} a {z_sub_bot:.1f}",
-                "Long. fuste (m)": L_sub,
+                "Long. fuste (m)": f"{L_sub:.2f}",
                 "σ'_v media (kPa)": sig_v_eff_mid,
                 "Resist. Unitaria τ_f (kPa)": tau_f,
                 "Fuerza Tramo (kN)": Q_tramo
@@ -496,7 +496,7 @@ if st.session_state.calculado:
                 sig_v_eff_mid_loop = obtener_tension_a_profundidad(z_mid_loop, z_vals, sig_v_eff)
                 sig_v_eff_base = obtener_tension_a_profundidad(min(z_sub_bot, 20*D_min), z_vals, sig_v_eff)
                 cond_loop = row_est["Condición"]
-                c_loop = row_est["c o cu (kPa)"]
+                c_loop = row_est["c / cu (kPa)"]
                 phi_loop = row_est["phi (grados)"]
                 
                 if "Corto Plazo" in cond_loop:
