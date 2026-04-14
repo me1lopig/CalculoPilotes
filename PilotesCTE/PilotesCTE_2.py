@@ -16,11 +16,11 @@ st.title("🏢 Diseño de Pilotes CTE DB-SE-C")
 st.markdown("Cálculo de cimentaciones profundas según el Documento Básico SE-C del Código Técnico de la Edificación.")
 
 # ══════════════════════════════════════════════════════════════════════════
-# INICIALIZACIÓN DE LA TABLA BASE 
+# INICIALIZACIÓN DE LA TABLA BASE Y CLAVE DINÁMICA
 # ══════════════════════════════════════════════════════════════════════════
 if 'df_base' not in st.session_state:
     st.session_state.df_base = pd.DataFrame({
-        "Estrato": ["Arcilla Blanda", "Arcilla Dura", "Arena Media", "Arena Densa"],
+        "Estrato": ["Relleno Antrópico", "Arcilla Dura", "Arena Media", "Arena Densa"],
         "Espesor (m)": [2.0, 5.0, 8.0, 10.0],
         "Gamma Seco (kN/m3)": [18.0, 19.0, 18.5, 20.0],
         "Gamma Sat. (kN/m3)": [20.0, 20.0, 20.5, 21.0],
@@ -28,6 +28,9 @@ if 'df_base' not in st.session_state:
         "c / cu (kPa)": [30.0, 150.0, 0.0, 0.0],
         "phi (grados)": [0.0, 0.0, 30.0, 35.0]
     })
+
+if 'table_key' not in st.session_state: 
+    st.session_state.table_key = 0
 
 if 'calculado' not in st.session_state: st.session_state.calculado = False
 if 'word_buffer' not in st.session_state: st.session_state.word_buffer = None
@@ -87,9 +90,10 @@ else: # Perforados
 st.sidebar.success(f"🛑 **Tope Estructural:** {sigma_tope_mpa:.2f} MPa")
 
 st.sidebar.markdown("---")
-st.sidebar.header("💧 Datos Generales")
+st.sidebar.header("💧 Datos Geotécnicos")
 zw = st.sidebar.number_input("Prof. Nivel Freático, zw (m)", min_value=0.0, value=3.0, step=0.5)
-FS = st.sidebar.number_input("FS Global (Tensiones Admisibles):", min_value=1.0, value=3.00, step=0.1)
+z_nulo = st.sidebar.number_input("Fuste Nulo en Cabeza (m)", min_value=0.0, value=1.5, step=0.5, help="Zona de desecación superficial donde no se cuenta rozamiento.")
+gamma_r = st.sidebar.number_input("Coef. Parcial Resistencia (γ_R):", min_value=1.0, value=3.00, step=0.1, help="Según Tabla 2.1 del CTE DB-SE-C (Valor habitual 3.0)")
 
 st.sidebar.header("📐 Matriz Geométrica")
 col_d1, col_d2 = st.sidebar.columns(2)
@@ -99,9 +103,15 @@ D_step = st.sidebar.number_input("Paso Ø (m)", value=0.2, min_value=0.1)
 
 z_max_total_sidebar = st.session_state.df_base["Espesor (m)"].sum()
 col_l1, col_l2 = st.sidebar.columns(2)
-L_min = col_l1.number_input("L min (m)", value=min(10.0, float(z_max_total_sidebar)), min_value=1.0, step=1.0)
-L_max = col_l2.number_input("L max (m)", value=min(20.0, float(z_max_total_sidebar)), min_value=float(L_min), step=1.0)
+
+# --- BLINDAJE CONTRA EL ERROR MIN_VALUE DE STREAMLIT ---
+val_def_L_min = max(1.0, min(10.0, float(z_max_total_sidebar)))
+L_min = col_l1.number_input("L min (m)", value=val_def_L_min, min_value=1.0, step=1.0)
+
+val_def_L_max = max(float(L_min), min(20.0, float(z_max_total_sidebar)))
+L_max = col_l2.number_input("L max (m)", value=val_def_L_max, min_value=float(L_min), step=1.0)
 L_step = st.sidebar.number_input("Paso L (m)", value=2.5, min_value=0.5)
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # MOTORES DE CÁLCULO CTE DB-SE-C
@@ -130,7 +140,7 @@ def calcular_perfil_tensiones(df, zw, z_max):
 def obtener_tension_a_profundidad(z_target, z_vals, sigma_array):
     return np.interp(z_target, z_vals, sigma_array)
 
-def calcular_pilote_cte(D, L, df, zw, fs_val, sigma_tope, fp, Kf, f_rug, is_steel):
+def calcular_pilote_cte(D, L, df, zw, z_nulo, gamma_r_val, sigma_tope, fp, Kf, f_rug, is_steel):
     z_max = df["Espesor (m)"].sum()
     if L > z_max: return None 
     
@@ -138,8 +148,10 @@ def calcular_pilote_cte(D, L, df, zw, fs_val, sigma_tope, fp, Kf, f_rug, is_stee
     z_eval_punta = L
     sig_v_eff_punta = obtener_tension_a_profundidad(z_eval_punta, z_vals, sig_v_eff)
     
-    # 🔴 CORRECCIÓN: Bulbo 6D hacia arriba y 3D hacia abajo
+    # BULBO UNIFORME: 6D hacia arriba y 3D hacia abajo
     z_sup_bulbo, z_inf_bulbo = max(0.0, L - (6 * D)), L + (3 * D)
+    tipo_bulbo = "6D/3D"
+
     espesor_bulbo = z_inf_bulbo - z_sup_bulbo
     qp_eq_acumulado, z_acum, detalle_bulbo_grafico = 0.0, 0.0, []
     
@@ -185,12 +197,16 @@ def calcular_pilote_cte(D, L, df, zw, fs_val, sigma_tope, fp, Kf, f_rug, is_stee
     for _, row in df.iterrows():
         z_bot = z_top + row["Espesor (m)"]
         if z_top >= L: break
+        
+        # Aplicación Zona Fuste Nulo
+        z_start_fuste = max(z_top, z_nulo)
         z_end_tramo = min(z_bot, L)
-        if z_end_tramo <= z_top:
+        
+        if z_end_tramo <= z_start_fuste:
             z_top = z_bot; continue
             
-        puntos_corte = [z_top]
-        if z_top < zw < z_end_tramo: puntos_corte.append(zw)
+        puntos_corte = [z_start_fuste]
+        if z_start_fuste < zw < z_end_tramo: puntos_corte.append(zw)
         puntos_corte.append(z_end_tramo)
         
         for i in range(len(puntos_corte) - 1):
@@ -216,15 +232,16 @@ def calcular_pilote_cte(D, L, df, zw, fs_val, sigma_tope, fp, Kf, f_rug, is_stee
             })
         z_top = z_bot
         
-    Q_adm_geo = (Q_punta + Q_fuste) / fs_val
+    Q_adm_geo = (Q_punta + Q_fuste) / gamma_r_val
     Q_tope_est = Area_pilote * (sigma_tope * 1000.0)
 
     return {
         "D": D, "L": L, "Q_punta (kN)": Q_punta, "Q_fuste (kN)": Q_fuste, 
         "Q_adm_geo (kN)": Q_adm_geo, "Q_tope_est (kN)": Q_tope_est, "Q_final (kN)": min(Q_adm_geo, Q_tope_est),
-        "Control": "ESTRUCTURAL" if Q_tope_est < Q_adm_geo else "GEOTÉCNICO",
+        "Control": "ESTRUCTURAL" if Q_tope_est < Q_adm_geo else "GEOTÉCNICA",
         "auditoria_punta": auditoria_punta, "auditoria_fuste": auditoria_fuste,
-        "auditoria_bulbo": detalle_bulbo_grafico, "z_sup_bulbo": z_sup_bulbo, "z_inf_bulbo": z_inf_bulbo
+        "auditoria_bulbo": detalle_bulbo_grafico, "z_sup_bulbo": z_sup_bulbo, "z_inf_bulbo": z_inf_bulbo,
+        "tipo_bulbo": tipo_bulbo
     }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -236,24 +253,35 @@ tab_datos, tab_tensiones, tab_matriz_punta, tab_matriz_fuste, tab_matriz_total, 
 
 with tab_datos:
     st.subheader("Definición de Unidades Geotécnicas")
+    
     df_edit = st.data_editor(
         st.session_state.df_base, 
-        key="tabla_estratos",
+        key=f"tabla_estratos_{st.session_state.table_key}",  # Clave dinámica para forzar la actualización
         num_rows="dynamic", 
         use_container_width=True,
         column_config={
-            "Condición": st.column_config.SelectboxColumn(
-                options=["Corto Plazo", "Largo Plazo"],
-                required=True
-            )
+            "Condición": st.column_config.SelectboxColumn(options=["Corto Plazo", "Largo Plazo"], required=True)
         }
     )
     
-    mascara_corto_plazo = df_edit["Condición"] == "Corto Plazo"
-    if (df_edit.loc[mascara_corto_plazo, "phi (grados)"] != 0.0).any():
-        df_edit.loc[mascara_corto_plazo, "phi (grados)"] = 0.0
-        st.session_state.df_base = df_edit.copy() 
-        st.toast("💡 φ ajustado automáticamente a 0º para condiciones a corto plazo", icon="⚙️")
+    # 🛡️ AUTOCORRECCIÓN INFALIBLE (EL GUARDIÁN DE ENTRADA)
+    df_modificado = False
+    
+    mascara_corto = df_edit["Condición"] == "Corto Plazo"
+    if (df_edit.loc[mascara_corto, "phi (grados)"] != 0.0).any():
+        df_edit.loc[mascara_corto, "phi (grados)"] = 0.0
+        df_modificado = True
+        st.toast("💡 Corto Plazo detectado: Ángulo de rozamiento forzado a 0º", icon="⚙️")
+
+    mascara_largo = df_edit["Condición"] == "Largo Plazo"
+    if (df_edit.loc[mascara_largo, "c / cu (kPa)"] != 0.0).any():
+        df_edit.loc[mascara_largo, "c / cu (kPa)"] = 0.0
+        df_modificado = True
+        st.toast("💡 Largo Plazo detectado: Cohesión forzada a 0 kPa", icon="⚙️")
+
+    if df_modificado:
+        st.session_state.df_base = df_edit.copy()
+        st.session_state.table_key += 1  # Destruye el componente visual y lo reconstruye
         st.rerun()
 
     espesores_invalidos = (df_edit["Espesor (m)"] <= 0).any()
@@ -284,7 +312,6 @@ if st.session_state.calculado:
     with tab_datos:
         st.markdown("---")
         st.subheader("📊 Resistencias Unitarias del Terreno (CTE DB-SE-C)")
-        st.markdown("*Nota: Fricción $\\tau_f$ media por estrato y presión en punta $q_p$ evaluada en la base de cada capa.*")
         
         datos_unitarios = []
         z_top_loop = 0.0
@@ -322,7 +349,7 @@ if st.session_state.calculado:
                 datos_unitarios.append({
                     "Estrato": row_est["Estrato"] + sufijo,
                     "Profundidad (m)": f"de {z_sub_top:.1f} a {z_sub_bot:.1f}",
-                    "Fricción media, τ_f (kPa)": round(tau_f_media, 1),
+                    "Fricción media, τ_f (kPa)": round(tau_f_media, 1) if z_mid_loop > z_nulo else 0.0,
                     "Punta base, q_p (kPa)": round(qp_base, 1)
                 })
             z_top_loop = z_bot_loop
@@ -361,7 +388,7 @@ if st.session_state.calculado:
     resultados = []
     for D in np.arange(D_min, D_max + 1e-5, D_step):
         for L in np.arange(L_min, L_max + 1e-5, L_step):
-            res = calcular_pilote_cte(D, L, df_edit, zw, FS, sigma_tope_mpa, fp_val, Kf_val, f_rug, is_steel)
+            res = calcular_pilote_cte(D, L, df_edit, zw, z_nulo, gamma_r, sigma_tope_mpa, fp_val, Kf_val, f_rug, is_steel)
             if res is not None: resultados.append(res)
 
     df_res = pd.DataFrame(resultados)
@@ -370,35 +397,35 @@ if st.session_state.calculado:
     if not df_res.empty:
         columnas_con_d = [f"Ø {d_val:.2f} m" for d_val in df_res['D'].unique()]
         
-        df_pivot_punta = df_res.pivot(index="L", columns="D", values="Q_punta (kN)") / FS
+        df_pivot_punta = df_res.pivot(index="L", columns="D", values="Q_punta (kN)") / gamma_r
         df_pivot_punta.index, df_pivot_punta.columns = [f"L = {idx:.1f} m" for idx in df_pivot_punta.index], columnas_con_d
         with tab_matriz_punta:
-            st.subheader(f"🔻 Carga Admisible SOLO por Punta (kN) - (FS = {FS:.2f})")
+            st.subheader(f"🔻 Resistencia Diseño SOLO por Punta, R_cd (kN)")
             st.dataframe(df_pivot_punta.style.background_gradient(cmap='Reds', axis=None).format("{:.0f}"), use_container_width=True)
             st.markdown("---")
             df_plot_punta = df_res.copy()
             df_plot_punta["Diámetro"] = df_plot_punta["D"].apply(lambda x: f"Ø {x:.2f} m")
-            df_plot_punta["Q_punta_adm (kN)"] = df_plot_punta["Q_punta (kN)"] / FS
-            fig_punta = px.line(df_plot_punta, x="L", y="Q_punta_adm (kN)", color="Diámetro", markers=True, title=f"Capacidad por Punta vs. Longitud (FS = {FS:.2f})", template="plotly_white")
+            df_plot_punta["R_cd_punta (kN)"] = df_plot_punta["Q_punta (kN)"] / gamma_r
+            fig_punta = px.line(df_plot_punta, x="L", y="R_cd_punta (kN)", color="Diámetro", markers=True, title=f"Capacidad de Diseño por Punta vs. Longitud (γ_R = {gamma_r:.2f})", template="plotly_white")
             st.plotly_chart(fig_punta, use_container_width=True)
 
-        df_pivot_fuste = df_res.pivot(index="L", columns="D", values="Q_fuste (kN)") / FS
+        df_pivot_fuste = df_res.pivot(index="L", columns="D", values="Q_fuste (kN)") / gamma_r
         df_pivot_fuste.index, df_pivot_fuste.columns = [f"L = {idx:.1f} m" for idx in df_pivot_fuste.index], columnas_con_d
         with tab_matriz_fuste:
-            st.subheader(f"🟫 Carga Admisible SOLO por Fuste (kN) - (FS = {FS:.2f})")
+            st.subheader(f"🟫 Resistencia Diseño SOLO por Fuste, R_cd (kN)")
             st.dataframe(df_pivot_fuste.style.background_gradient(cmap='Oranges', axis=None).format("{:.0f}"), use_container_width=True)
             st.markdown("---")
             df_plot_fuste = df_res.copy()
             df_plot_fuste["Diámetro"] = df_plot_fuste["D"].apply(lambda x: f"Ø {x:.2f} m")
-            df_plot_fuste["Q_fuste_adm (kN)"] = df_plot_fuste["Q_fuste (kN)"] / FS
-            fig_fuste = px.line(df_plot_fuste, x="L", y="Q_fuste_adm (kN)", color="Diámetro", markers=True, title=f"Capacidad por Fuste vs. Longitud (FS = {FS:.2f})", template="plotly_white")
+            df_plot_fuste["R_cd_fuste (kN)"] = df_plot_fuste["Q_fuste (kN)"] / gamma_r
+            fig_fuste = px.line(df_plot_fuste, x="L", y="R_cd_fuste (kN)", color="Diámetro", markers=True, title=f"Capacidad de Diseño por Fuste vs. Longitud (γ_R = {gamma_r:.2f})", template="plotly_white")
             st.plotly_chart(fig_fuste, use_container_width=True)
 
         df_pivot_geo = df_res.pivot(index="L", columns="D", values="Q_adm_geo (kN)")
         df_pivot_geo.index, df_pivot_geo.columns = [f"L = {idx:.1f} m" for idx in df_pivot_geo.index], columnas_con_d
         df_pivot_geo_global = df_pivot_geo
         with tab_matriz_total:
-            st.subheader("🌍 Carga Admisible TOTAL del Terreno (kN)")
+            st.subheader(f"🌍 Resistencia de Diseño TOTAL del Terreno, R_cd (kN)")
             st.dataframe(df_pivot_geo.style.background_gradient(cmap='Greens', axis=None).format("{:.0f}"), use_container_width=True)
 
         df_pivot_final, df_pivot_control = df_res.pivot(index="L", columns="D", values="Q_final (kN)"), df_res.pivot(index="L", columns="D", values="Control")
@@ -413,7 +440,7 @@ if st.session_state.calculado:
         df_pivot_final_global = df_final_formateada
         
         with tab_matriz_tope:
-            st.subheader(f"🛑 Matriz de Carga de Diseño FINAL (kN)")
+            st.subheader(f"🛑 Matriz de Carga de Diseño FINAL LIMITADA (kN)")
             def style_df(df):
                 styles = pd.DataFrame('', index=df.index, columns=df.columns)
                 for r in df.index:
@@ -431,18 +458,18 @@ if st.session_state.calculado:
             st.session_state.fig_final_guardada = fig_final 
 
         with tab_auditoria:
-            st.subheader("🔍 Auditoría (CTE F.2)")
+            st.subheader("🔍 Auditoría (CTE DB-SE-C F.2)")
             col_aud1, col_aud2 = st.columns(2)
             d_aud = col_aud1.selectbox("Diámetro Ø (m):", df_res['D'].unique(), format_func=lambda x: f"{x:.2f}")
             l_aud = col_aud2.selectbox("Longitud L (m):", df_res['L'].unique(), format_func=lambda x: f"{x:.2f}")
             res_aud = df_res[(df_res['D'] == d_aud) & (df_res['L'] == l_aud)].iloc[0]
             
-            st.markdown(f"**Carga Final:** {res_aud['Q_final (kN)']:.0f} kN | **Punta:** {res_aud['Q_punta (kN)']:.0f} kN | **Fuste:** {res_aud['Q_fuste (kN)']:.0f} kN")
+            st.markdown(f"**Carga Final:** {res_aud['Q_final (kN)']:.0f} kN | **R_cd Punta:** {res_aud['Q_punta (kN)']/gamma_r:.0f} kN | **R_cd Fuste:** {res_aud['Q_fuste (kN)']/gamma_r:.0f} kN")
             st.dataframe(pd.DataFrame(res_aud['auditoria_fuste']).style.format({"Long. fuste (m)": "{:.2f}", "σ'_v media (kPa)": "{:.1f}", "Resist. Unitaria τ_f (kPa)": "{:.2f}", "Fuerza Tramo (kN)": "{:.0f}"}).hide(axis="index"), use_container_width=True)
             st.dataframe(pd.DataFrame(res_aud['auditoria_bulbo']).style.format({"Espesor en bulbo (m)": "{:.2f}", "Participación (%)": "{:.1f}%", "q_p individual (kPa)": "{:.0f}"}).hide(axis="index"), use_container_width=True)
 
             st.markdown("---")
-            st.markdown(f"#### 📐 Esquema Gráfico del Pilote y Estratigrafía (Bulbo 6D/3D)")
+            st.markdown(f"#### 📐 Esquema Gráfico del Pilote (Bulbo: {res_aud['tipo_bulbo']})")
             
             D_val = res_aud['D']
             L_val = res_aud['L']
@@ -460,11 +487,15 @@ if st.session_state.calculado:
 
             fig_bulbo.add_shape(type="rect", x0=-D_val*1.2, x1=D_val*1.2, y0=-D_val*0.6, y1=0, fillcolor="#8B8C89", line=dict(color="black", width=2))
             fig_bulbo.add_shape(type="rect", x0=-D_val/2, x1=D_val/2, y0=0, y1=L_val, fillcolor="#A9ACA9", line=dict(color="black", width=2))
+            
+            if z_nulo > 0:
+                fig_bulbo.add_shape(type="rect", x0=-D_val/2, x1=D_val/2, y0=0, y1=z_nulo, fillcolor="rgba(255, 255, 0, 0.4)", line=dict(color="orange", width=2, dash="dash"))
+                fig_bulbo.add_annotation(x=D_val*0.8, y=z_nulo/2, text="Fuste<br>Nulo", showarrow=False, xanchor="left", font=dict(color="orange"))
+
             fig_bulbo.add_shape(type="rect", x0=-D_val/2, x1=-D_val/4, y0=0, y1=L_val, fillcolor="black", opacity=0.15, line_width=0)
             fig_bulbo.add_shape(type="rect", x0=D_val/4, x1=D_val/2, y0=0, y1=L_val, fillcolor="white", opacity=0.25, line_width=0)
             fig_bulbo.add_shape(type="line", x0=-D_val/2, x1=D_val/2, y0=L_val, y1=L_val, line=dict(color="black", width=4))
 
-            # 🔴 CORRECCIÓN: Dibujo del bulbo 6D/3D
             fig_bulbo.add_shape(type="rect", x0=-D_val*1.5, x1=D_val*1.5, y0=z_sup, y1=z_inf, fillcolor="rgba(255, 0, 0, 0.15)", line=dict(color="red", width=3, dash="dash"))
             fig_bulbo.add_annotation(x=D_val*1.6, y=(z_sup+L_val)/2, text=f"6D Arriba<br>({L_val - z_sup:.1f} m)", showarrow=False, xanchor="left", font=dict(color="red", size=13, family="Arial Black"))
             fig_bulbo.add_annotation(x=D_val*1.6, y=(L_val+z_inf)/2, text=f"3D Abajo<br>({z_inf - L_val:.1f} m)", showarrow=False, xanchor="left", font=dict(color="red", size=13, family="Arial Black"))
@@ -482,19 +513,20 @@ if st.session_state.calculado:
             st.markdown(f"*(Definido por procedimiento: {desc_tope})*")
             st.markdown("### 1. Punta en Suelos Granulares (F.30)")
             st.markdown(r"$q_p = f_p \cdot \sigma'_{vp} \cdot N_q \le 20 \text{ MPa}$")
-            st.markdown(f"*En este cálculo: $f_p = {fp_val}$. La evaluación de la resistencia se realiza de forma ponderada en un entorno de **6D por encima y 3D por debajo** de la cota de base del pilote.*")
+            st.markdown(f"*En este cálculo: $f_p = {fp_val}$. La evaluación de la punta se promedia ponderadamente en un entorno de **6D por encima y 3D por debajo**.*")
             st.markdown("### 2. Fuste en Suelos Granulares (F.31)")
             st.markdown(r"$\tau_f = \sigma'_v \cdot K_f \cdot f \cdot \tan\phi \le 120 \text{ kPa}$")
             st.markdown(f"*En este cálculo: $K_f = {Kf_val}$ y $f = {f_rug}$*")
             st.markdown("### 3. Punta en Suelos Finos (F.32)")
             st.markdown(r"$q_p = N_p \cdot c_u$ (Con $N_p = 9$)")
+            st.markdown("*Para garantizar la seguridad, la evaluación de la punta en arcillas también se promedia en el entorno de **6D por encima y 3D por debajo** para todos los terrenos.*")
             st.markdown("### 4. Fuste en Suelos Finos (F.33)")
             st.markdown(r"$\tau_f = \frac{100 \cdot c_u}{100 + c_u}$")
 
 # ══════════════════════════════════════════════════════════════════════════
 # GENERADOR DEL INFORME WORD CTE
 # ══════════════════════════════════════════════════════════════════════════
-def generar_word_cte(df_estratos, fig_tens, df_pivot_geo, df_pivot_final, fs_val, zw_val, sigma_tope, fig_final, desc_t):
+def generar_word_cte(df_estratos, fig_tens, df_pivot_geo, df_pivot_final, gamma_val, z_nul, zw_val, sigma_tope, fig_final, desc_t):
     doc = Document()
     estilo_tabla = 'Light Grid Accent 1'
     
@@ -518,19 +550,23 @@ def generar_word_cte(df_estratos, fig_tens, df_pivot_geo, df_pivot_final, fs_val
     p_bases.add_run(f'{sigma_tope:.2f} MPa\n')
     p_bases.add_run(f'• Nivel Freático: ').bold = True
     p_bases.add_run(f'Z = {zw_val:.2f} m\n')
+    p_bases.add_run(f'• Zonas Excluidas: ').bold = True
+    p_bases.add_run(f'Se descuenta rozamiento en los primeros {z_nul:.2f} m de fuste.\n')
+    p_bases.add_run(f'• Factor de Seguridad (Estados Límite): ').bold = True
+    p_bases.add_run(f'Coeficiente Parcial de Resistencia γ_R = {gamma_val:.2f}\n')
 
     doc.add_heading('2. Metodología Analítica (CTE DB-SE-C, Anexo F.2)', level=1)
     p_metodo = doc.add_paragraph()
     p_metodo.add_run('Resistencia por Punta (qp):\n').bold = True
-    p_metodo.add_run('• Suelos Finos (Corto Plazo): qp = Np · cu (adoptando Np = 9).\n')
+    p_metodo.add_run('• Suelos Finos (Corto Plazo): qp = Np · cu.\n')
     p_metodo.add_run('• Suelos Granulares (Largo Plazo): qp = fp · σ\'vp · Nq ≤ 20 MPa.\n')
-    p_metodo.add_run('NOTA: El entorno de evaluación del terreno para la capacidad de la punta se promedia ponderadamente considerando el espesor de los estratos interceptados en un bulbo de 6 diámetros por encima y 3 diámetros por debajo de la punta.\n\n')
+    p_metodo.add_run('NOTA: El entorno de evaluación del terreno para la capacidad de la punta se promedia ponderadamente considerando el espesor de los estratos interceptados en un bulbo de 6 diámetros por encima y 3 diámetros por debajo de la punta para todo tipo de suelos.\n\n')
     
     p_metodo.add_run('Resistencia por Fuste (τf):\n').bold = True
     p_metodo.add_run('• Corto Plazo: τf = 100·cu / (100 + cu). Afectado por coef. reductor 0.8 si el fuste es de acero.\n')
     p_metodo.add_run('• Largo Plazo: τf = σ\'v · Kf · f · tg(φ) ≤ 120 kPa.\n\n')
     
-    doc.add_heading('3. Resultados Matriciales Admisibles (kN)', level=1)
+    doc.add_heading('3. Resultados Matriciales de Diseño (kN)', level=1)
     tabla_fin = doc.add_table(rows=1, cols=len(df_pivot_final.columns) + 1)
     tabla_fin.style = estilo_tabla
     hdr_fin = tabla_fin.rows[0].cells
@@ -554,13 +590,28 @@ def generar_word_cte(df_estratos, fig_tens, df_pivot_geo, df_pivot_final, fs_val
     buffer.seek(0)
     return buffer
 
+# ══════════════════════════════════════════════════════════════════════════
+# INTERFAZ DE DESCARGA
+# ══════════════════════════════════════════════════════════════════════════
+if st.session_state.calculado:
     st.sidebar.markdown("---")
+    st.sidebar.subheader("📄 Memoria de Cálculo")
+    
     if st.sidebar.button("🛠️ Generar Informe (.docx)", type="primary", use_container_width=True):
         if not df_res.empty:
-            with st.spinner("Generando..."):
-                buffer = generar_word_cte(df_edit, fig_tens, df_pivot_geo_global, df_pivot_final_global, FS, zw, sigma_tope_mpa, st.session_state.fig_final_guardada, desc_tope)
+            with st.spinner("Generando documento Word..."):
+                buffer = generar_word_cte(
+                    df_edit, fig_tens, df_pivot_geo_global, df_pivot_final_global, 
+                    gamma_r, z_nulo, zw, sigma_tope_mpa, st.session_state.fig_final_guardada, desc_tope
+                )
                 st.session_state.word_buffer = buffer
-            st.sidebar.success("✅ ¡Informe generado!")
+            st.sidebar.success("✅ ¡Informe ejecutivo generado!")
 
     if st.session_state.word_buffer is not None:
-        st.sidebar.download_button(label="⬇️ Descargar Informe", data=st.session_state.word_buffer, file_name="Anejo_Pilotes_CTE.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+        st.sidebar.download_button(
+            label="⬇️ Descargar Informe", 
+            data=st.session_state.word_buffer, 
+            file_name="Anejo_Pilotes_CTE.docx", 
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+            use_container_width=True
+        )
